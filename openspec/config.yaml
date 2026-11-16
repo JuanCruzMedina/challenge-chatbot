@@ -1,0 +1,75 @@
+schema: spec-driven
+
+context: |
+  Language: en
+  All artifacts must be written in en.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Project: a multi-source documentation chatbot for a microservices ecosystem.
+  Challenge brief: "Multi-Source Chatbot with Intelligent Agent Orchestration".
+  Design decisions live in `docs/design-decisions.md`; read it before proposing
+  anything that touches architecture. All data is invented: never add real
+  company, client or personal information.
+
+  Architecture invariants (non-negotiable):
+  - Informational queries always go through one centralized RAG + Knowledge
+    Graph flow, exposed to the agent as a single tool.
+  - Actions always go through an MCP Server with correct MCP schemas, separate
+    from the informational graph.
+  - The agent (LLM with tool-calling) chooses the route. No if/else and no
+    keyword routing in the agent logic.
+  - Adding a tool to the MCP Server must not require touching the agent logic.
+  - The UI is passive and ready-made. No custom frontend.
+  - Knowledge ingestion is a separate pipeline; the chat agent only reads it.
+
+  Development philosophy:
+  - Conventional Commits (`feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert`).
+  - TDD: tests precede implementation. Automated tests use a fake LLM and never
+    spend tokens; real-LLM runs are manual and opt-in (`LIVE_LLM=1`).
+  - Python with `uv`; nothing installed globally.
+
+  Architecture Decision Records: `docs/adr/` holds accepted decisions and
+  `docs/adr/proposals/` holds proposed ones, one numbering sequence across both.
+  Warranted only for a durable architectural decision. Existing decisions D1-D11
+  stay in `docs/design-decisions.md`; new ones go to ADRs.
+
+rules:
+  specs:
+    - 'format: "Given-When-Then" for behavioral specifications.'
+    - 'acceptance_criteria: Mandatory for every spec.'
+    - 'scenario_coverage: Every `#### Scenario:` must be individually testable
+      and ship with at least one test. A scenario with no test is an incomplete
+      change.'
+    - 'capability_shape: One capability per feature across every layer, named
+      `<module>-<feature>`. Modules: `ecosystem-data`, `mcp-actions`,
+      `knowledge-graph`, `knowledge-retrieval`, `agent`, `ingestion`, `ui`,
+      `platform`.'
+    - 'invariants_echo: When the change touches routing, tools or the
+      informational/action boundary, restate the relevant architecture
+      invariant in the change artifacts.'
+
+  design:
+    - 'adr_capture: If the design embodies a durable architectural decision,
+      reference its ADR. Routine changes do not get an ADR.'
+
+  proposal:
+    - 'constraints: Keep under 500 words; include a "Non-goals" section.'
+    - 'focus: Architectural consistency with the invariants above, and no
+      secrets or real data.'
+
+  tasks:
+    - 'granularity: Max 2 hours per task.'
+    - 'sequence: Red-Green-Refactor. Define the interface, write the failing
+      test, implement, then refactor. Tests precede implementation.'
+    - 'cost: No task may call a paid or real LLM in an automated test.'
+
+operations:
+  apply:
+    guidance:
+      - 'Implement at least one test per `#### Scenario:` in the delta specs.'
+      - 'Run the focused tests before the full suite.'
+      - 'Do not commit or push. Report what changed and wait for the user.'
+  archive:
+    guidance:
+      - 'Before archiving, confirm every scenario has a test and that a durable
+        architectural decision has its ADR.'

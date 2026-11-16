@@ -1,0 +1,30 @@
+name: orders-service
+repo: demo-grocery/orders-service
+owner_team: orders-team
+tech_lead: Tomás Aguirre
+lifecycle: production
+description: Creates and manages orders. Orchestrates the purchase flow between catalog and payments.
+provides_apis:
+  - id: orders-api
+    version: v1
+    status: active
+    doc: docs/api.md
+consumes_apis:
+  - catalog-api
+  - payments-api
+publishes_events:
+  - order.created
+  - order.cancelled
+subscribes_events:
+  - payment.confirmed
+  - payment.failed
+  - product.price_changed
+docs:
+  - README.md
+  - docs/api.md
+  - docs/adr-001-event-driven-orders.md
+  - docs/runbook-stuck-order.md
+features:
+  - FEAT-101
+  - FEAT-102
+  - FEAT-201

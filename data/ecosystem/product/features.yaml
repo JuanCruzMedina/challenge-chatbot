@@ -1,0 +1,40 @@
+epics:
+  - id: EPIC-01
+    name: Reliable checkout
+    product_owner: Sofía Mendoza
+  - id: EPIC-02
+    name: Catalog experience
+    product_owner: Sofía Mendoza
+  - id: EPIC-03
+    name: Customer communication
+    product_owner: Sofía Mendoza
+
+features:
+  - id: FEAT-101
+    name: Card payment
+    epic: EPIC-01
+    status: released
+    services:
+      - payments-service
+      - orders-service
+  - id: FEAT-102
+    name: Retry of failed payments
+    epic: EPIC-01
+    status: in_progress
+    services:
+      - payments-service
+      - orders-service
+      - notifications-service
+  - id: FEAT-201
+    name: Real-time prices
+    epic: EPIC-02
+    status: released
+    services:
+      - catalog-service
+      - orders-service
+  - id: FEAT-301
+    name: Order status emails
+    epic: EPIC-03
+    status: released
+    services:
+      - notifications-service

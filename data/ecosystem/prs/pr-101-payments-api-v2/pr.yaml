@@ -1,0 +1,16 @@
+id: PR-101
+repo: demo-grocery/payments-service
+title: "payments-api v2 with automatic retries and v1 deprecation"
+author: Valeria Sosa
+merged_at: "2026-11-20"
+description: >
+  Adds payments-api v2, which supports automatic retries of failed charges
+  (the technical basis of FEAT-102). Marks payments-api v1 as deprecated,
+  with a sunset date of 2027-03-31. Consumers of v1 must migrate.
+changes:
+  - path: service.yaml
+    status: modified
+  - path: README.md
+    status: modified
+  - path: docs/api-v2.md
+    status: added

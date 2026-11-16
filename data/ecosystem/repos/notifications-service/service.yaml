@@ -1,0 +1,19 @@
+name: notifications-service
+repo: demo-grocery/notifications-service
+owner_team: communications-team
+tech_lead: Iván Prado
+lifecycle: production
+description: Sends emails and messages to the customer based on purchase flow events.
+provides_apis: []
+consumes_apis: []
+publishes_events: []
+subscribes_events:
+  - order.created
+  - order.cancelled
+  - payment.failed
+docs:
+  - README.md
+  - docs/runbook-delayed-emails.md
+features:
+  - FEAT-102
+  - FEAT-301

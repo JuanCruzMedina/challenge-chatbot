@@ -1,0 +1,30 @@
+name: payments-service
+repo: demo-grocery/payments-service
+owner_team: payments-team
+tech_lead: Valeria Sosa
+lifecycle: production
+description: Processes card charges and refunds. Publishes the result of each charge as an event.
+provides_apis:
+  - id: payments-api
+    version: v1
+    status: deprecated
+    sunset: "2027-03-31"
+    doc: docs/api-v1.md
+  - id: payments-api
+    version: v2
+    status: active
+    doc: docs/api-v2.md
+consumes_apis: []
+publishes_events:
+  - payment.confirmed
+  - payment.failed
+subscribes_events:
+  - order.created
+docs:
+  - README.md
+  - docs/api-v1.md
+  - docs/api-v2.md
+  - docs/runbook-failed-payments.md
+features:
+  - FEAT-101
+  - FEAT-102
