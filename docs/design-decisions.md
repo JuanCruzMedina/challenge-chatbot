@@ -31,7 +31,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 - Scope in the challenge: **simulated and incremental**. A single function `ingest(repo, commit_range)` takes the diff of a simulated PR and reindexes only what changed. It is invoked by script, with no GitHub Actions and nothing published.
 - It processes only: documentation markdown, service manifests (owner, dependencies, APIs) and the PR text. It does **not** parse source code (future).
 - Every chunk and node stores `repo`, `commit`, `file` and date, so it can delete and reindex incrementally and cite versioned sources.
-- The chat agent **only reads** knowledge. Actions requested by the user always go through the MCP Server.
+- The chat agent **only reads the index** (RAG + KG). Actions requested by the user, including adding or updating documentation, always go through the MCP Server, which writes the **documentation sources** (files) and never the index. Ingestion is the only thing that turns sources into the index. Edits from the chat are written directly with a conflict check (a passage is replaced only if the text the caller saw is still there exactly once; otherwise a `conflict` is reported and nothing is written). Revised 2026-11-16 after the `add-mcp-actions-server` change.
 - Open point: this is an interpretation of the brief ("the MCP Server is the only valid mechanism for executing actions"). Ingestion is a system process, not a user action. If it matters for the evaluation, confirm it with the lead.
 
 ## D3. Orchestration: LangGraph — accepted
@@ -64,7 +64,8 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 - It is the **only** mechanism for executing actions, and it is not part of the informational graph.
 - Correct MCP schemas: a name, a clear description and an `inputSchema` (JSON Schema) on every tool.
 - Tools are **discovered dynamically** by an MCP client (`langchain-mcp-adapters`). Adding a new tool does not touch the agent.
-- Actions operate on invented, local data. Nothing is published.
+- Actions operate on invented, local data, in a git-ignored workspace copied from the sample data. Nothing is published.
+- Built with `mcp` 2.x (`MCPServer`, which replaced `FastMCP`); details and SDK findings in the archived change `add-mcp-actions-server`.
 
 ## D7. Agent and routing — accepted
 
