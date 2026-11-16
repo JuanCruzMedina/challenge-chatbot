@@ -1,0 +1,78 @@
+# Actions server (MCP)
+
+The only place where actions run. It is a small MCP Server (official `mcp` SDK 2.x, stdio) that lets a client add, update and mark documentation as obsolete. It does not answer questions about the documentation: that is the job of the informational RAG + Knowledge Graph flow (see `design-decisions.md` D2, D6, D7).
+
+Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is archived, until then `openspec/changes/add-mcp-actions-server/`.
+
+## Tools
+
+| Tool | Use it to | Arguments (required in bold) | Result |
+| --- | --- | --- | --- |
+| `add_document` | create a new markdown document | **`service`**, **`doc_path`**, **`content`** | `outcome: created` |
+| `update_document` | replace one passage in an existing document | **`service`**, **`doc_path`**, **`old_text`**, **`new_text`** | `outcome: updated` or `outcome: conflict` |
+| `mark_document_obsolete` | flag a document as outdated | **`service`**, **`doc_path`**, **`reason`**, `replaced_by` | `outcome: marked_obsolete` or `already_obsolete` |
+
+- `service` is a lowercase slug of an existing service folder, for example `payments-service`.
+- `doc_path` is relative to the service, ends in `.md`, and has no `..`, for example `docs/api-v2.md`.
+- Every schema is closed: an unknown argument is rejected.
+- Invalid input is an **error result** (`is_error`) whose message names the argument. A **conflict** is a normal result: nothing is written and the caller decides what to do.
+
+### Conflicts
+
+`update_document` writes only if `old_text` appears **exactly once** in the current file. If it is gone (someone else edited the document) the outcome is `conflict` with the reason `text not found`; if it appears more than once, `text not unique`. The server never merges: the agent tells the user and retries with the exact current text.
+
+### Obsolete documents
+
+`mark_document_obsolete` adds a front-matter block to the document itself:
+
+```markdown
+---
+status: obsolete
+obsolete_reason: "Replaced by v2"
+replaced_by: "docs/api-v2.md"
+---
+# original document...
+```
+
+Marking twice changes nothing. Ingestion can read this block later.
+
+## Workspace
+
+The tools never write to the committed sample data. They write to a **workspace**, a git-ignored working copy:
+
+```bash
+uv run python scripts/seed_workspace.py      # create, or reset to a fresh copy
+```
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DOCS_WORKSPACE` | `var/workspace` | Root of the workspace (`<root>/repos/<service>/...`) |
+| `ACTIONS_AUDIT_FILE` | `var/audit/actions.jsonl` | One JSON line per successful write |
+
+The seed script deletes only inside a workspace it created itself (it leaves a `.seeded-workspace` marker) and refuses to touch anything else.
+
+Written documents are **not searchable** until the ingestion pipeline runs: the server never touches the index.
+
+## Run it
+
+```bash
+uv run python -m ecosystem_assistant.actions.server     # speaks MCP over stdio
+```
+
+It is normally started by an MCP client (the agent). To exercise it by hand, use any MCP client, or the in-process tests.
+
+## Add a tool
+
+1. Create a module in `src/ecosystem_assistant/actions/tools/`, for example `tickets.py`.
+2. Define `register(server, workspace)` and declare the tool inside it with `@server.tool(description=...)`. The description must say when to use the tool and when **not** to.
+3. Done. Restart the server. `server.py`, the existing tools and any agent code stay untouched; the new tool shows up in the tool listing with its own schema (`tests/actions/test_extensibility.py` proves it).
+
+Modules whose name starts with `_` are ignored. A module that cannot be imported, or that has no `register`, stops the startup with an error naming it.
+
+## Tests
+
+```bash
+uv run pytest
+```
+
+No test uses a real LLM or the network. `tests/test_architecture_isolation.py` fails if the actions package imports the retrieval, graph, agent or ingestion packages, or any LLM or network library.

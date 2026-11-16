@@ -1,0 +1,122 @@
+"""Safe access to the documentation workspace (paths, atomic writes, audit log).
+
+Layout: ``<root>/repos/<service>/...``. Every path a tool touches is resolved here and
+must stay inside its service folder. Nothing in this module reads the index, the
+knowledge graph or any LLM (design.md D-3, D-6, D-7, D-8).
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path, PurePosixPath
+
+from mcp.server.mcpserver.exceptions import ToolError
+
+# src/ecosystem_assistant/actions/workspace.py -> repository root
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_WORKSPACE = REPO_ROOT / "var" / "workspace"
+DEFAULT_AUDIT_FILE = REPO_ROOT / "var" / "audit" / "actions.jsonl"
+
+SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+class WorkspaceError(ToolError):
+    """A failure the caller can fix. It reaches the model with its message."""
+
+
+@dataclass(frozen=True)
+class Workspace:
+    root: Path
+    audit_file: Path
+
+    @classmethod
+    def from_env(cls) -> "Workspace":
+        return cls(
+            root=Path(os.environ.get("DOCS_WORKSPACE", DEFAULT_WORKSPACE)),
+            audit_file=Path(os.environ.get("ACTIONS_AUDIT_FILE", DEFAULT_AUDIT_FILE)),
+        )
+
+    # --- services -------------------------------------------------------------------
+
+    @property
+    def repos_dir(self) -> Path:
+        return self.root / "repos"
+
+    def list_services(self) -> list[str]:
+        if not self.repos_dir.is_dir():
+            return []
+        return sorted(p.name for p in self.repos_dir.iterdir() if p.is_dir())
+
+    def service_dir(self, service: str) -> Path:
+        if not isinstance(service, str) or not SLUG.fullmatch(service):
+            raise WorkspaceError(
+                f"service must be a lowercase slug (letters, digits and hyphens): {service!r}"
+            )
+        candidate = self.repos_dir / service
+        if not candidate.is_dir():
+            valid = ", ".join(self.list_services()) or "none"
+            raise WorkspaceError(f"service {service!r} does not exist in the workspace. Valid services: {valid}")
+        resolved = candidate.resolve()
+        if not resolved.is_relative_to(self.repos_dir.resolve()):
+            raise WorkspaceError(f"service {service!r} resolves outside the workspace")
+        return resolved
+
+    # --- documents ------------------------------------------------------------------
+
+    def resolve_doc(self, service: str, doc_path: str) -> Path:
+        base = self.service_dir(service)
+        validate_relative_md(doc_path)
+        resolved = (base / doc_path).resolve()
+        if not resolved.is_relative_to(base):
+            raise WorkspaceError(f"doc_path {doc_path!r} resolves outside the service folder")
+        return resolved
+
+    @staticmethod
+    def write_atomic(target: Path, text: str) -> None:
+        """Write ``text`` to ``target`` so that a failure never leaves a partial file."""
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=".tmp-", suffix=".part")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+                handle.write(text)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp_name, target)
+        except BaseException:
+            try:
+                os.unlink(tmp_name)
+            except FileNotFoundError:
+                pass
+            raise
+
+    # --- audit log ------------------------------------------------------------------
+
+    def audit(self, action: str, service: str, path: str) -> None:
+        entry = {
+            "action": action,
+            "service": service,
+            "path": path,
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        self.audit_file.parent.mkdir(parents=True, exist_ok=True)
+        with self.audit_file.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def validate_relative_md(value: str, name: str = "doc_path") -> None:
+    """Check that ``value`` is a safe relative path to a markdown file; errors name ``name``."""
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceError(f"{name} must be a non-empty relative path ending in .md")
+    if "\\" in value or "\x00" in value:
+        raise WorkspaceError(f"{name} must use forward slashes only: {value!r}")
+    path = PurePosixPath(value)
+    if path.is_absolute():
+        raise WorkspaceError(f"{name} must be relative, not absolute: {value!r}")
+    if ".." in path.parts:
+        raise WorkspaceError(f"{name} must not contain '..': {value!r}")
+    if value.endswith("/") or not path.name.endswith(".md") or path.name == ".md":
+        raise WorkspaceError(f"{name} must be a file ending in .md: {value!r}")

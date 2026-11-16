@@ -21,9 +21,9 @@
 
 ## Decisions
 
-**D-1. Official `mcp` SDK with `FastMCP`, stdio transport.** Tools are plain typed functions registered with the SDK decorator, and the SDK derives `inputSchema` from the type hints. Alternatives: the third-party `fastmcp` package (more features, another dependency) and a hand-written JSON-RPC loop (more code, more room for schema errors). The exact SDK API is checked against the installed version before use, because it moves quickly.
+**D-1. Official `mcp` SDK (2.x) with `MCPServer`, stdio transport.** Tools are plain typed functions registered with the SDK decorator, and the SDK derives `inputSchema` from the type hints. In `mcp` 2.x the class `FastMCP` was renamed `mcp.server.mcpserver.MCPServer`, so the dependency is pinned to `mcp~=2.3`. Alternatives: the third-party `fastmcp` package (more features, another dependency) and a hand-written JSON-RPC loop (more code, more room for schema errors). The API was verified against the installed 2.3.0 before use (task 1.3).
 
-**D-2. Auto-discovery of tool modules.** `server.py` builds the server and imports every module in `ecosystem_assistant.actions.tools` with `pkgutil.iter_modules`; each module registers its tools on a shared server instance. Adding a tool is adding a file. Alternatives: an explicit import list in `server.py` (adding a tool edits the entry point, which the spec forbids) and entry points (heavier than needed). An import error aborts startup with the module name; modules whose name starts with `_` are skipped.
+**D-2. Auto-discovery of tool modules.** `server.py` builds the server and imports every module in `ecosystem_assistant.actions.tools` with `pkgutil.iter_modules`; each module exposes `register(server, workspace)` and registers its tools there (no global state, so tests inject a temporary workspace). Adding a tool is adding a file. Alternatives: an explicit import list in `server.py` (adding a tool edits the entry point, which the spec forbids) and entry points (heavier than needed). An import error aborts startup with the module name; modules whose name starts with `_` are skipped.
 
 **D-3. A workspace, not the committed data.** Tools read and write under `DOCS_WORKSPACE` (default `var/workspace/`, git-ignored). `scripts/seed_workspace.py` copies `data/ecosystem/repos/` into it, so the committed sample stays a clean baseline and a demo can be reset in one command. Layout: `<workspace>/repos/<service>/...`. Alternative: write straight into `data/ecosystem/` (every demo would dirty git).
 
@@ -33,7 +33,11 @@
 
 **D-6. Validate against the workspace, never the knowledge graph.** `service` must be a folder that exists in the workspace, and the error lists the valid ones; the server never consults the index or the graph to decide. A model that invents a service name gets a clear error. This keeps the action side independent from the informational side.
 
-**D-7. Path safety and atomic writes.** `service` is a slug (`^[a-z0-9-]+$`), `doc_path` is relative, ends in `.md` and has no `..`. The resolved target must stay inside the workspace (symlinks included). Writes go to a temporary file in the same directory and are renamed over the target. Validation raises `ValueError`, which the SDK turns into an error result.
+**D-7. Path safety and atomic writes.** `service` is a slug (`^[a-z0-9-]+$`), `doc_path` is relative, ends in `.md` and has no `..`. The resolved target must stay inside the workspace (symlinks included). Writes go to a temporary file in the same directory and are renamed over the target.
+
+**D-7b. Deliberate errors use `ToolError`.** Verified in 2.3.0: any other exception is treated as a crash and the model only sees `Error executing tool <name>`. Validation failures the spec requires to name the offending argument therefore raise `mcp.server.mcpserver.exceptions.ToolError` with the message, which reaches the model with `is_error=True`.
+
+**D-7c. Closed schemas through a small adapter.** The SDK generates input schemas without `additionalProperties: false` and silently accepts unknown arguments, but the spec requires closed schemas. After the tools are registered, an adapter in `server.py` sets `additionalProperties: false` on every tool schema and switches each argument model to `extra="forbid"`. It touches SDK internals (`_tool_manager`), so it is isolated in one function, guarded by the `mcp~=2.3` pin, and covered by a discovery test that fails if the schema is not closed or an unknown argument is accepted.
 
 **D-8. Audit log.** Each successful write appends one JSON line (`action`, `service`, `path`, `timestamp`) to `var/audit/actions.jsonl` (location from `ACTIONS_AUDIT_FILE`). It makes demos traceable without a database.
 

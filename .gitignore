@@ -5,3 +5,4 @@ __pycache__/
 .chroma/
 .cost_ledger.json
 .DS_Store
+var/
