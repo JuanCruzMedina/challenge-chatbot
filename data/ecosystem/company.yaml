@@ -1,0 +1,25 @@
+company:
+  id: demo-studio
+  name: Demo Studio
+  description: An invented software studio that builds and runs applications for its clients.
+
+clients:
+  - id: demo-grocery
+    name: Demo Grocery
+    vision: clients/demo-grocery/product/vision.md
+    features: clients/demo-grocery/product/features.yaml
+  - id: demo-logistics
+    name: Demo Logistics
+    vision: clients/demo-logistics/product/vision.md
+    features: clients/demo-logistics/product/features.yaml
+
+applications:
+  - id: storefront
+    name: Storefront
+    client: demo-grocery
+  - id: fleet-tracker
+    name: Fleet Tracker
+    client: demo-logistics
+  - id: driver-app
+    name: Driver App
+    client: demo-logistics

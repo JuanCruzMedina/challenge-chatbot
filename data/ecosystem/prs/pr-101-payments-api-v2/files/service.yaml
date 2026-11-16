@@ -3,6 +3,8 @@ repo: demo-grocery/payments-service
 owner_team: payments-team
 tech_lead: Valeria Sosa
 lifecycle: production
+client: demo-grocery
+application: storefront
 description: Processes card charges and refunds. Publishes the result of each charge as an event.
 provides_apis:
   - id: payments-api

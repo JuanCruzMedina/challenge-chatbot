@@ -3,6 +3,8 @@ repo: demo-grocery/catalog-service
 owner_team: catalog-team
 tech_lead: Nora Beltrán
 lifecycle: production
+client: demo-grocery
+application: storefront
 description: Source of truth for products, categories and prices of Demo Grocery.
 provides_apis:
   - id: catalog-api

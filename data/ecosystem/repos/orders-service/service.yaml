@@ -3,6 +3,8 @@ repo: demo-grocery/orders-service
 owner_team: orders-team
 tech_lead: Tomás Aguirre
 lifecycle: production
+client: demo-grocery
+application: storefront
 description: Creates and manages orders. Orchestrates the purchase flow between catalog and payments.
 provides_apis:
   - id: orders-api

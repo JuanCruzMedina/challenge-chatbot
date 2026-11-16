@@ -32,9 +32,9 @@ def test_seed_copies_every_sample_repo(tmp_path: Path) -> None:
     dest = tmp_path / "ws"
     seed(SAMPLE, dest)
     assert _digest(dest / "repos") == _digest(SAMPLE)
-    assert {p.name for p in (dest / "repos").iterdir()} == {
-        "catalog-service", "notifications-service", "orders-service", "payments-service"
-    }
+    expected = {p.name for p in SAMPLE.iterdir() if p.is_dir()}
+    assert len(expected) >= 4
+    assert {p.name for p in (dest / "repos").iterdir()} == expected
 
 
 def test_seeding_again_restores_a_fresh_copy(tmp_path: Path) -> None:

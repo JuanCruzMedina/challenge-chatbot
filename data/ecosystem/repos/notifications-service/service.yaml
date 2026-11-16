@@ -3,6 +3,8 @@ repo: demo-grocery/notifications-service
 owner_team: communications-team
 tech_lead: Iván Prado
 lifecycle: production
+client: demo-grocery
+application: storefront
 description: Sends emails and messages to the customer based on purchase flow events.
 provides_apis: []
 consumes_apis: []

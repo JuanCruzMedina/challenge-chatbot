@@ -1,0 +1,19 @@
+name: routing-service
+repo: demo-logistics/routing-service
+owner_team: routing-team
+tech_lead: Elena Pardo
+lifecycle: production
+client: demo-logistics
+application: fleet-tracker
+description: Plans routes from the positions of the fleet and publishes each assigned route as an event.
+provides_apis: []
+consumes_apis: []
+publishes_events:
+  - route.assigned
+subscribes_events:
+  - vehicle.position_updated
+docs:
+  - README.md
+  - docs/routing-rules.md
+features:
+  - LOG-FEAT-102

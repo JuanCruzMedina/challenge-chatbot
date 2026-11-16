@@ -1,0 +1,21 @@
+name: driver-service
+repo: demo-logistics/driver-service
+owner_team: driver-team
+tech_lead: Diego Núñez
+lifecycle: production
+client: demo-logistics
+application: driver-app
+description: Backend of the driver application. Delivers assigned routes to drivers and shows them the position of their vehicle.
+provides_apis: []
+consumes_apis:
+  - tracking-api
+publishes_events: []
+subscribes_events:
+  - route.assigned
+docs:
+  - README.md
+  - docs/route-delivery.md
+features:
+  - LOG-FEAT-101
+  - LOG-FEAT-102
+  - LOG-FEAT-201

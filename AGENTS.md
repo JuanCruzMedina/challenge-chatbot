@@ -4,7 +4,7 @@ Entry point for every coding agent working in this repository. It routes you to 
 
 ## What this is
 
-A multi-source chatbot for the challenge "Multi-Source Chatbot with Intelligent Agent Orchestration". It answers questions about a fictional microservices ecosystem ("Demo Grocery") and can perform actions. **All data is invented.** Never add real company, client or personal information.
+A multi-source chatbot for the challenge "Multi-Source Chatbot with Intelligent Agent Orchestration". It answers questions about a fictional software studio ("Demo Studio": 2 clients, 3 applications, 7 microservices, one product vision per client) and can perform actions. **All data is invented.** Never add real company, client or personal information.
 
 ## Source-of-truth map
 

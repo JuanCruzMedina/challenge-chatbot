@@ -1,0 +1,29 @@
+epics:
+  - id: LOG-EPIC-01
+    name: Live fleet visibility
+    product_owner: Camila Ortega
+  - id: LOG-EPIC-02
+    name: Reliable routes
+    product_owner: Camila Ortega
+
+features:
+  - id: LOG-FEAT-101
+    name: Live vehicle positions
+    epic: LOG-EPIC-01
+    status: released
+    services:
+      - tracking-service
+      - driver-service
+  - id: LOG-FEAT-102
+    name: Automatic route assignment
+    epic: LOG-EPIC-02
+    status: in_progress
+    services:
+      - routing-service
+      - driver-service
+  - id: LOG-FEAT-201
+    name: Driver route notifications
+    epic: LOG-EPIC-02
+    status: planned
+    services:
+      - driver-service

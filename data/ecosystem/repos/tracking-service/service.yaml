@@ -1,0 +1,23 @@
+name: tracking-service
+repo: demo-logistics/tracking-service
+owner_team: tracking-team
+tech_lead: Bruno Salas
+lifecycle: production
+client: demo-logistics
+application: fleet-tracker
+description: Receives vehicle positions, keeps the latest one per vehicle and publishes every update as an event.
+provides_apis:
+  - id: tracking-api
+    version: v1
+    status: active
+    doc: docs/api.md
+consumes_apis: []
+publishes_events:
+  - vehicle.position_updated
+subscribes_events: []
+docs:
+  - README.md
+  - docs/api.md
+  - docs/runbook-missing-positions.md
+features:
+  - LOG-FEAT-101

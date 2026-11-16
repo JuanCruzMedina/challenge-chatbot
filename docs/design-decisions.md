@@ -15,7 +15,7 @@ Status: **draft v1** (2026-11-16). Each decision carries its status: `accepted`,
 - **Actions (via MCP):** for example `create_documentation_ticket`, `mark_document_obsolete`, `assign_reviewer`.
 - **Future vision:** the index and the KG update themselves when PRs are merged, giving a global understanding of services, APIs, dependencies and owners, and how they relate to product features and epics.
 
-Scope inside the challenge: an invented ecosystem of 3 to 4 microservices in fake local git repos, plus a product document.
+Scope inside the challenge: an invented company ("Demo Studio") with 2 clients, 3 applications and 7 microservices in fake local repos. Each client has its own product vision and feature catalog, so the assistant can answer company-wide questions (which applications a client has, whose vision a service serves). The hierarchy lives in the manifests, not in the folder layout (change `extend-ecosystem-hierarchy`).
 
 ## D2. Ingestion separated from chat — accepted
 
