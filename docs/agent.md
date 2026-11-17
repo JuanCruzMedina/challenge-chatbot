@@ -177,10 +177,9 @@ To check the whole path with real calls (three tiny ones, estimated at $0.00015;
 LIVE_LLM=1 uv run python scripts/live_check.py --yes
 ```
 
-**Status: not run yet.** Everything above is tested with fake clients and fake transports; the probe of task 1.2 made three
+**Status: the three-call check was not run; the routing evaluation was.** Everything above is tested with fake clients and fake transports; the probe of task 1.2 made three
 real calls (JSON with a schema, a plain reply, an effort setting through the chat model) and the login session worked.
-The full `live_check` and the routing evaluation with a real model have not been run, so no claim is made yet about how
-well Claude routes in this project.
+The full `live_check` has not been run. The routing evaluation was run with Claude (16/16, see below).
 
 ## The routing evaluation
 
@@ -198,9 +197,12 @@ judge model:
 uv run python scripts/eval_agent.py --min-rate 0.7
 ```
 
-**Measured with:** scripted models only. The grading rules, the report and the isolation between turns are tested; the
-rate of a real model has **not** been measured yet (the run with Ollama is optional and was not requested). Until
-it is run, no claim is made about how well `qwen2.5:7b-instruct` routes.
+**Measured with:** `claude-haiku-5-5` (provider `anthropic`, hashing embedder), one run on 2026-11-17 with the tools
+of that day (four MCP tools): **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about
+$0.016 by the ledger's estimate. Every mixed turn called `query_knowledge` before the write tool, and the chat and
+unsupported turns called no tool. Read it with care: 16 turns written by the project, one run (the model is not
+deterministic), one model. The grading rules, the report and the isolation between turns are also tested with
+scripted models. Nothing is claimed about `qwen2.5:7b-instruct`: the run with Ollama has not been made.
 
 ## Limits
 

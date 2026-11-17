@@ -1,0 +1,59 @@
+# Check against the six evaluation criteria
+
+The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists six conditions for a valid solution. For each one: what the code does, the evidence that can be re-run, and what is **not** proven. Run everything with `uv run pytest tests -q` (about 45 s, free: no test calls a real model).
+
+| # | Criterion | Verdict | Strength of the evidence |
+|---|---|---|---|
+| 1 | Informational queries go through a centralized RAG + KG flow | Met | Tests + structure |
+| 2 | Action requests always run through an MCP Server | Met | Tests + structure |
+| 3 | The agent chooses autonomously between the two routes | Met | Loop tests (scripted) + 16/16 with Claude (small set) |
+| 4 | No manual conditional logic (if/else, keywords) | Met for routing | Static tests |
+| 5 | Modular and extensible: tools added without touching routing | Met | Tests + a real tool addition |
+| 6 | The MCP Server handles all actions with correct MCP schemas | Met | Tests |
+
+## 1. Informational queries: one centralized RAG + KG flow
+
+- The agent has exactly one way to read knowledge: the tool `query_knowledge` (`agent/knowledge.py`). It wraps the whole LangGraph flow (plan → graph queries + document search → answer → check) of [informational-flow.md](informational-flow.md), which combines the Knowledge Graph (NetworkX) and the RAG index (Chroma) and returns a cited answer.
+- Evidence: `tests/agent/test_agent_loop.py::test_a_question_is_answered_through_the_knowledge_tool_only`; the flow's own tests in `tests/flow/` (graph facts and passages become numbered, cited evidence); `tests/agent/test_isolation.py` (the knowledge side and the model layer do not import the agent).
+- Seen in a real session: a question about teams produced a `query_knowledge` call whose answer mixed graph facts `[K1]` and document passages `[D2]`.
+- Not proven: that the answer is *true*. `grounded` means "cites existing evidence".
+
+## 2. Actions always through an MCP Server
+
+- The only code that writes documentation is `actions/` (an MCP server, official `mcp` SDK, stdio). The agent does not import it (`test_the_agent_package_does_not_import_the_actions_package`) and the actions package imports no knowledge or model code (`tests/test_architecture_isolation.py`). The agent reaches the actions only as MCP tool calls over the protocol.
+- Evidence: `tests/agent/test_agent_loop.py::test_an_action_request_runs_the_mcp_tool_the_model_asked_for`; `tests/actions/test_stdio_smoke.py` (a real server process); every write is in the audit log (`tests/actions/test_write_safety.py`).
+- Separation: the MCP server is not part of the informational graph; a question never runs an action tool and an action never runs the flow, unless the model asks for both in one turn (`test_a_request_that_needs_both_...`).
+
+## 3. The agent chooses autonomously
+
+- The agent is a two-node loop (`model`, `tools`). The model receives the conversation and the tool list with descriptions and answers either with text or with tool calls. The code runs what was asked. Nothing else decides.
+- Evidence: `test_the_route_does_not_depend_on_the_words_of_the_message` (the same code path for different wording), `test_a_turn_that_needs_no_tool_calls_no_tool`, `test_the_graph_has_only_a_model_step_and_a_tools_step`.
+- **Honest limit.** These tests use a *scripted* model, so they prove that the **code** does not choose. They do not prove that a *real* model chooses well. `evaluation/agent.yaml` (16 turns: questions, actions, mixed, chat, unsupported) and `scripts/eval_agent.py` measure that with no judge model: run with Claude Haiku 5.5 it passed 16/16 (details and limits in the status at the end).
+
+## 4. No manual conditional logic
+
+- Routing code: `agent/graph.py` has one branch, `route`: *did the model's last message ask for tools?* That is the mechanics of tool calling, not an inspection of what the person wrote.
+- Evidence (static, on the source): `test_the_routing_files_do_not_inspect_the_text_of_messages` (no `re`, no `.lower()`, `.startswith()`, `.find()` in the routing files); `tests/chat/test_isolation.py` (the chat does not inspect messages except `/exit`); `test_no_mcp_tool_name_appears_in_the_agent_source` (no tool is named in the agent, so there is nothing to compare names against).
+- Scope of the claim: "no manual logic **in the routing**". Other code (validation of the flow's plan, argument checks in the tools) has ordinary conditionals; none of it decides between informational and action.
+- Mutation check done: adding a tool name to the agent source makes the test fail.
+
+## 5. Modular and extensible
+
+- At the start of every turn the agent lists the server's tools again and rebuilds its loop. A tool is a module in `actions/tools/` with a `register` function; the server registers every module it finds.
+- Evidence: `tests/actions/test_extensibility.py` (a new module appears and the defaults are unchanged), `tests/agent/test_mcp_toolbox.py::test_a_tool_added_to_the_servers_package_is_available_with_its_own_schema` and `tests/agent/test_agent.py::test_the_tools_are_listed_again_at_the_start_of_every_turn` (a tool added between two turns shows up in the second).
+- Real addition: `append_to_document` was added in commit `4dbd149`. Careful reading of that commit: the *tool* is one function in `actions/tools/documents.py`, but the same commit also edited the agent's system prompt (to teach confirmation and conflict rules, unrelated to the tool). So it is a **real** extension but not a clean demonstration; the clean one is described below.
+
+## 6. The MCP Server handles all actions with correct schemas
+
+- Four tools, each with a description that says when to use it and when **not** to, a closed JSON Schema (`additionalProperties: false`), `required` lists matching the mandatory arguments, and typed arguments (a service slug pattern, a minimum length on the path).
+- Evidence: `tests/actions/test_server_discovery.py` (descriptions, closed schemas, required lists, unknown arguments rejected, invalid input as an MCP error that names the argument, a conflict as a normal result, success is not an error).
+- The agent forwards the schemas exactly as the server declares them (`agent/mcp_tools.py`); it does not rewrite them.
+
+## What was verified by hand
+
+- The hosted Agent Chat UI (`https://agentchat.vercel.app` against `langgraph dev`) with Claude: a question called `query_knowledge` and the answer came back with graph and document citations; a statement that contradicted the documentation (two names given as team leads) was not accepted as fact and the agent asked which was right. The same session exposed the problems fixed by `improve-search-and-edits` (no way to list teams, edits proposed on a file the tools cannot touch, repeated confirmations). A full run of the new version in the web UI is the user's step.
+
+## Status and what is still open
+
+- Real-model routing: `scripts/eval_agent.py` with `claude-haiku-5-5`, run on 2026-11-17: **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about $0.016 by the ledger's estimate. The mixed turns called `query_knowledge` first and then the write tool; chat and unsupported turns called no tool. The log is the output of `LLM_PROVIDER=anthropic uv run python scripts/eval_agent.py --min-rate 0.7`. It is a small set (16 turns, written by the project), one run and one model, so it supports "the model routes correctly on these cases", not a general rate.
+- Clean extensibility demonstration (a new tool in its own new file, with a commit that touches nothing in `agent/`, `chat/` or `knowledge/`): in progress as `add-ticket-tool`.
