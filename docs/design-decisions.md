@@ -59,6 +59,8 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 
 **If usage becomes multi-user or team-wide: Neo4j or Memgraph** (server-based).
 
+**Implemented** in `ecosystem_assistant.knowledge.graph` (change `add-knowledge-graph`): entities, relations, the query interface and its limits are described in `docs/knowledge-graph.md`. Only that package touches NetworkX.
+
 ## D6. MCP Server: official Python SDK (`FastMCP`), stdio — accepted
 
 - It is the **only** mechanism for executing actions, and it is not part of the informational graph.

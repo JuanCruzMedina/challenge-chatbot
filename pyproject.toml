@@ -5,12 +5,13 @@ description = "Multi-source documentation chatbot for a microservices ecosystem 
 requires-python = ">=3.12"
 dependencies = [
     "mcp~=2.3",
+    "networkx~=3.7",
+    "pyyaml~=6.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest",
-    "pyyaml>=6.0.3",
 ]
 
 [build-system]
