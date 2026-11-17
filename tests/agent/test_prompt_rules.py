@@ -18,7 +18,12 @@ def test_the_prompt_carries_the_three_rules() -> None:
     assert "confirms" in text and "order to act" in text          # a "yes" is the order to act
     assert "contradict" in text and "knowledge tool" in text      # conflicts are checked, then asked
     assert "markdown" in text                                      # write tools edit markdown documents only
-    assert len(SYSTEM_PROMPT.splitlines()) < 30
+    assert len(SYSTEM_PROMPT.splitlines()) < 40
+
+
+def test_the_prompt_tells_the_model_to_quote_edits_from_the_passages() -> None:
+    text = " ".join(SYSTEM_PROMPT.lower().split())
+    assert "passages" in text and "never invent" in text and "exact" in text
 
 
 def test_the_prompt_names_no_tool_of_the_server(workspace_dir: Path, audit_file: Path) -> None:
@@ -53,3 +58,32 @@ def test_after_a_confirmation_a_scripted_turn_writes_once(workspace_dir: Path, a
     assert written.read_text(encoding="utf-8") == "Leo Messi is the Product Owner of orders-team.\n"
     assert "written" in reply.text
 
+
+
+def test_a_scripted_turn_edits_a_document_with_text_quoted_from_a_returned_passage(
+    workspace_dir: Path, audit_file: Path, tmp_path: Path
+) -> None:
+    import json
+
+    quoted = "v1 does **not** support automatic retries: after a failure, the consumer must create a new charge."
+    replacement = "v1 does not retry automatically; use v2 for automatic retries."
+    chat = ScriptedChat(script=[
+        ai_tool("query_knowledge", {"question": "Does payments api v1 support automatic retries?"}, "call-a"),
+        ai_tool("update_document", {"service": "payments-service", "doc_path": "docs/api-v1.md",
+                                    "old_text": quoted, "new_text": replacement}, "call-b"),
+        ai_text("Updated the rule in docs/api-v1.md."),
+    ])
+
+    async def scenario():
+        async with Agent.open(chat=chat, workspace=workspace_dir, audit_file=audit_file,
+                              knowledge=knowledge_service(workspace_dir, tmp_path)) as agent:
+            return await agent.chat("Update the retries rule of payments-api v1: it now points to v2.")
+
+    reply = run(scenario())
+
+    passages = json.loads(reply.tool_calls[0].result)["passages"]
+    assert any(quoted in p["text"] and p["exact"] for p in passages), "the quote must come from a returned passage"
+    assert [c.name for c in reply.tool_calls] == ["query_knowledge", "update_document"]
+    assert not reply.tool_calls[1].error
+    text = (workspace_dir / "repos/payments-service/docs/api-v1.md").read_text(encoding="utf-8")
+    assert replacement in text and quoted not in text

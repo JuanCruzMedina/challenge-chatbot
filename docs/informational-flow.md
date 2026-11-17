@@ -41,7 +41,7 @@ Unknown methods, missing or extra arguments, filters that name an unknown client
 ## The answer
 
 ```text
-Answer(question, text, status, grounded, citations, trace, llm)   # .to_dict() is plain JSON
+Answer(question, text, status, grounded, citations, trace, llm, passages)   # .to_dict() is plain JSON
 ```
 
 | `status` | Meaning |
@@ -49,6 +49,8 @@ Answer(question, text, status, grounded, citations, trace, llm)   # .to_dict() i
 | `answered` | the model wrote the answer and it was checked |
 | `insufficient_evidence` | nothing relevant was found; a fixed message says so |
 | `degraded` | the plan failed twice, or the answer failed twice and the flow answered from the evidence itself |
+
+`passages` lists the document passages the flow retrieved (`id`, `path`, `heading_path`, `text`, `truncated`, `exact`). `text` is the section body as it is in the file; `exact` is true only when the flow was given the data root, the text appears in the file exactly as written and it was not cut (a passage over 1,500 characters is cut and marked `truncated`). The agent uses them to quote the text to replace when it edits a document.
 
 `grounded` is true when at least one valid citation remains after the check. **It means "cites evidence that exists", not "is true"** (see Limits). Each citation says whether it comes from the graph or from a document and lists its source files. The trace records every stage, the plan items that were dropped and the citations that were removed.
 

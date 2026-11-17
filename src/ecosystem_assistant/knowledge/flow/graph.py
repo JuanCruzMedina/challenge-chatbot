@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import operator
 import os
+from pathlib import Path
 from typing import Annotated
 
 # LangGraph pulls in LangSmith, a tracing service. Nothing may leave the machine, so it is forced off
@@ -21,7 +22,7 @@ os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
 from langgraph.graph import END, START, StateGraph  # noqa: E402
 
-from ecosystem_assistant.knowledge.flow.answer import Answer, TraceStep  # noqa: E402
+from ecosystem_assistant.knowledge.flow.answer import Answer, PassageInfo, TraceStep, passage_info  # noqa: E402
 from ecosystem_assistant.knowledge.flow.nodes import FlowNodes, FlowState  # noqa: E402
 from ecosystem_assistant.knowledge.graph.queries import KnowledgeGraph  # noqa: E402
 from ecosystem_assistant.knowledge.retrieval.index import RetrievalIndex  # noqa: E402
@@ -53,8 +54,9 @@ class InformationalFlow:
     """Answers any informational question through one pipeline: plan, graph, documents, answer, check."""
 
     def __init__(self, graph: KnowledgeGraph, index: RetrievalIndex, llm: LLM,
-                 min_score: float | None = None, k: int = 5) -> None:
+                 min_score: float | None = None, k: int = 5, data_root: Path | None = None) -> None:
         self.graph, self.index, self.llm = graph, index, llm
+        self.data_root = Path(data_root) if data_root is not None else None
         self.min_score = default_min_score(index.embedder.name) if min_score is None else min_score
         self._compiled = self._build(FlowNodes(graph, index, llm, self.min_score, k))
 
@@ -87,4 +89,19 @@ class InformationalFlow:
         return Answer(
             question=question, text=result["text"], status=result["status"], grounded=result["grounded"],
             citations=list(result["citations"]), trace=list(final["trace"]), llm=self.llm.name,
+            passages=self._passages(final),
         )
+
+    def _passages(self, final: dict) -> list[PassageInfo]:
+        """The retrieved passages; with a data root each is checked against its file for exactness."""
+        search = final.get("search")
+        found: list[PassageInfo] = []
+        for passage in (search.passages if search is not None else []):
+            file_text = None
+            if self.data_root is not None:
+                try:
+                    file_text = (self.data_root / passage.path).read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError):
+                    file_text = None
+            found.append(passage_info(passage, file_text))
+        return found

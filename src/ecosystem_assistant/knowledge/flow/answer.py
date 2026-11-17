@@ -28,6 +28,36 @@ class Citation:
         return asdict(self)
 
 
+MAX_PASSAGE_CHARS = 1500
+
+
+@dataclass(frozen=True)
+class PassageInfo:
+    """A retrieved document passage as the caller may use it: where it is and its text.
+
+    ``text`` is the section body without the heading path. ``exact`` is True only when that text appears in the
+    source file exactly as written and was not cut, so it is safe to quote when editing the file.
+    """
+    id: str
+    path: str
+    heading_path: str
+    text: str
+    truncated: bool = False
+    exact: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def passage_info(passage: Any, file_text: str | None = None) -> PassageInfo:
+    """Build the caller-facing passage; ``file_text`` (the source file) lets it be checked for exactness."""
+    prefix = f"{passage.heading_path}\n\n"
+    body = passage.text[len(prefix):] if passage.text.startswith(prefix) else passage.text
+    truncated = len(body) > MAX_PASSAGE_CHARS
+    exact = not truncated and file_text is not None and body in file_text
+    return PassageInfo(passage.id, passage.path, passage.heading_path, body[:MAX_PASSAGE_CHARS], truncated, exact)
+
+
 @dataclass
 class Draft:
     text: str = ""
@@ -174,6 +204,7 @@ class Answer:
     citations: list[Citation]
     trace: list[TraceStep]
     llm: str = ""
+    passages: list[PassageInfo] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

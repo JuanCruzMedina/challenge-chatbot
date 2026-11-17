@@ -125,7 +125,7 @@ def test_the_tool_returns_the_answer_status_grounded_flag_and_sources_as_json(wo
 
     result = json.loads(run(tool.ainvoke({"question": "Who owns the tracking service?"})))
 
-    assert set(result) == {"answer", "status", "grounded", "sources"}
+    assert set(result) == {"answer", "status", "grounded", "sources", "passages"}
     assert result["status"] == "answered" and result["grounded"] is True
     assert "[K1]" in result["answer"]
     k1 = next(s for s in result["sources"] if s["id"] == "K1")
@@ -137,3 +137,23 @@ def test_the_tool_does_not_hide_an_unreachable_model(workspace_dir: Path, tmp_pa
     service = KnowledgeService(workspace_dir, RetrievalIndex(tmp_path / "index", HashingEmbedder()), llm, min_score=0.0)
     with pytest.raises(LLMUnavailableError):
         run(make_knowledge_tool(service).ainvoke({"question": "anything"}))
+
+
+def test_the_tool_result_has_the_exact_passages_that_can_be_quoted(workspace_dir: Path, tmp_path: Path) -> None:
+    service, _ = service_for(workspace_dir, tmp_path)
+    tool = make_knowledge_tool(service)
+
+    result = json.loads(run(tool.ainvoke({"question": "Does payments api v1 support automatic retries?"})))
+
+    assert result["passages"]
+    for passage in result["passages"]:
+        assert set(passage) == {"id", "path", "heading_path", "text", "truncated", "exact"}
+        if passage["exact"]:
+            assert passage["text"] in (workspace_dir / passage["path"]).read_text(encoding="utf-8")
+    rules = [p for p in result["passages"] if "v1 does **not** support automatic retries" in p["text"]]
+    assert rules and rules[0]["exact"] is True and rules[0]["path"] == "repos/payments-service/docs/api-v1.md"
+
+
+def test_the_tool_description_says_the_passages_can_be_quoted(workspace_dir: Path, tmp_path: Path) -> None:
+    service, _ = service_for(workspace_dir, tmp_path)
+    assert "passages" in make_knowledge_tool(service).description.lower()

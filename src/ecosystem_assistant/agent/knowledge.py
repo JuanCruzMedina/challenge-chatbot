@@ -22,9 +22,10 @@ TOOL_DESCRIPTION = (
     "Answer a question about the company's documentation and architecture: services, APIs, events, owners and "
     "leads, applications and clients, features, product vision, runbooks and how things relate to each other. "
     "Use it for ANY question about facts or documentation. It only reads: it never changes anything. "
-    "Its result has the answer (with [K1] / [D1] citations), a status, whether it is grounded, and the sources "
-    "of every citation. Pass the answer on to the person as it is, keep its citations and name its sources; do not "
-    "add facts that are not in it."
+    "Its result has the answer (with [K1] / [D1] citations), a status, whether it is grounded, the sources "
+    "of every citation, and the passages of documents it found (path, section and text). Pass the answer on to the "
+    "person as it is, keep its citations and name its sources; do not add facts that are not in it. When you must "
+    "change an existing document, quote the text to replace from a passage marked exact (not truncated)."
 )
 
 TOOL_SCHEMA = {
@@ -60,7 +61,8 @@ class KnowledgeService:
         """Rebuild the graph, synchronize the index (only changed files are embedded), then run the flow."""
         graph = build_graph(self.data_root)
         self.index.sync(self.data_root, graph)
-        return InformationalFlow(graph, self.index, self.llm, min_score=self.min_score, k=self.k).ask(question)
+        return InformationalFlow(graph, self.index, self.llm, min_score=self.min_score, k=self.k,
+                                 data_root=self.data_root).ask(question)
 
 
 def render(answer: Answer) -> str:
@@ -72,6 +74,7 @@ def render(answer: Answer) -> str:
             "grounded": answer.grounded,
             "sources": [{"id": c.id, "kind": c.kind, "label": c.label, "sources": c.sources}
                         for c in answer.citations],
+            "passages": [p.to_dict() for p in answer.passages],
         },
         ensure_ascii=False,
     )
