@@ -44,7 +44,7 @@ def test_the_agent_lists_the_knowledge_tool_and_the_discovered_tools(workspace_d
     names = run(scenario())
 
     assert names[0] == "query_knowledge"
-    assert sorted(names[1:]) == ["add_document", "mark_document_obsolete", "update_document"]
+    assert sorted(names[1:]) == ["add_document", "append_to_document", "mark_document_obsolete", "update_document"]
 
 
 def test_a_turn_returns_the_reply_and_a_record_of_every_tool_call_as_json(workspace_dir, audit_file, tmp_path) -> None:

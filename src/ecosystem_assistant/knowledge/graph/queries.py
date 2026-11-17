@@ -20,6 +20,7 @@ from ecosystem_assistant.knowledge.graph import model as m
 
 _TOKEN = re.compile(r"[a-z0-9]+")
 _TECHNICAL = frozenset({m.PROVIDES, m.CONSUMES, m.PUBLISHES, m.SUBSCRIBES_TO})
+_TYPE_ALIASES = {"people": "person", "persons": "person"}
 MATCH_LABELS = ("exact", "tokens", "partial", "substring")
 
 
@@ -211,6 +212,28 @@ class ObsoleteDocuments(_Plain):
     found: bool = True
 
 
+@dataclass
+class EntityList(_Plain):
+    type: str
+    entities: list[EntityRef]
+    sources: list[str]
+    found: bool = True
+
+
+@dataclass
+class TeamService(_Plain):
+    service: EntityRef
+    lead: EntityRef | None
+
+
+@dataclass
+class TeamOverview(_Plain):
+    team: EntityRef
+    services: list[TeamService]
+    sources: list[str]
+    found: bool = True
+
+
 # --- the graph ----------------------------------------------------------------------------
 
 class KnowledgeGraph:
@@ -385,6 +408,41 @@ class KnowledgeGraph:
         nodes = {key, *[k for k in (team, lead) if k]}
         edges = {(key, k, rel) for k, rel in ((team, m.OWNED_BY), (lead, m.LED_BY)) if k}
         return ServiceOwner(self._ref(key), self._opt_ref(team), self._opt_ref(lead), self._sources(nodes, edges))
+
+    def list_entities(self, type: str) -> EntityList | NotFound:  # noqa: A002
+        """Every entity of one type (``team``, ``person``, ``service``, ...), sorted by name."""
+        wanted = _fold(type).strip()
+        wanted = _TYPE_ALIASES.get(wanted, wanted)
+        valid = sorted(m.TYPE_ORDER)
+        entity_type = next((t for t in valid if t in (wanted, wanted.removesuffix("s"))), None)
+        if entity_type is None:
+            return NotFound(
+                query=type,
+                message=f"Unknown entity type {type!r}. Valid types: {', '.join(valid)}.",
+                suggestions=[EntityRef(t, "type", t) for t in valid],
+            )
+        keys = sorted(
+            (k for k, d in self._g.nodes(data=True) if d["type"] == entity_type),
+            key=lambda k: (_fold(self._g.nodes[k]["name"]), k),
+        )
+        return EntityList(entity_type, [self._ref(k) for k in keys], self._sources(keys))
+
+    def team_overview(self, team: str) -> TeamOverview | NotFound:
+        """A team, the services it owns and the person who leads each of them."""
+        key = self._resolve(team, m.TEAM)
+        if isinstance(key, NotFound):
+            return key
+        nodes, edges = {key}, set()
+        services: list[TeamService] = []
+        for service in self._origins(key, m.OWNED_BY):
+            lead = self._first(self._targets(service, m.LED_BY))
+            nodes.add(service)
+            edges.add((service, key, m.OWNED_BY))
+            if lead:
+                nodes.add(lead)
+                edges.add((service, lead, m.LED_BY))
+            services.append(TeamService(self._ref(service), self._opt_ref(lead)))
+        return TeamOverview(self._ref(key), services, self._sources(nodes, edges))
 
     def api_consumers(self, api: str) -> ApiConsumers | NotFound:
         key = self._resolve(api, m.API)

@@ -9,7 +9,7 @@ decision belongs to the model, which reads the tool descriptions.
 | Tool | Where it comes from | What it is for |
 |---|---|---|
 | `query_knowledge` | `agent/knowledge.py` | Every informational question. It wraps the whole flow of [informational-flow.md](informational-flow.md) (graph + documents, cited answer). It is the **only** way the agent reads knowledge. |
-| every tool the MCP server lists | discovered at runtime by `agent/mcp_tools.py` | Actions: today `add_document`, `update_document`, `mark_document_obsolete`. |
+| every tool the MCP server lists | discovered at runtime by `agent/mcp_tools.py` | Actions: today `add_document`, `append_to_document`, `update_document`, `mark_document_obsolete`. |
 
 The agent source names no MCP tool. A test reads the real server's tool list and fails if any name appears in
 `src/ecosystem_assistant/agent/`.
@@ -38,6 +38,16 @@ At the start of every turn the agent asks the server for its tool list again and
 tool means adding a module to the server's tools package; the agent is not touched and not restarted. The bridge keeps
 each tool's name, description and JSON Schema exactly as the server declares them. The extensibility test starts a
 real server with an extra tool and calls it through the agent.
+
+## What the prompt teaches about writing
+
+The prompt names no tool, but it gives three rules (checked by `tests/agent/test_prompt_rules.py`):
+
+- **A confirmation is the order to act.** After a "yes" the agent writes in that turn; it asks again only for a value a tool needs and it does not know.
+- **Conflicts are checked, then asked.** Before writing a fact about owners, leads or other documented data, the agent checks it with the knowledge tool. If it contradicts the documentation it says what the documentation says and asks which is right; if not, it writes without asking.
+- **Write tools handle markdown documents only.** A new fact goes into a markdown document (for example `docs/product-owner.md`), not into `service.yaml`.
+
+These rules are guidance for the model. The tests with a scripted model prove that the prompt has them and that the loop runs the tools in order; how well a real model follows them has not been measured.
 
 ## Knowledge refresh
 
@@ -94,7 +104,7 @@ print((work / "workspace/repos/tracking-service/docs/lead.md").read_text().split
 ```
 
 ```text
-['query_knowledge', 'add_document', 'update_document', 'mark_document_obsolete']
+['query_knowledge', 'add_document', 'append_to_document', 'update_document', 'mark_document_obsolete']
 ['query_knowledge'] | tracking-team owns it, and Bruno Salas leads it [K1].
 ['add_document'] | I created docs/lead.md.
 [] | Hello! How can I help?

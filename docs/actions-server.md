@@ -9,6 +9,7 @@ Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is arc
 | Tool | Use it to | Arguments (required in bold) | Result |
 | --- | --- | --- | --- |
 | `add_document` | create a new markdown document | **`service`**, **`doc_path`**, **`content`** | `outcome: created` |
+| `append_to_document` | add text at the end of a document, or create it (nothing to quote) | **`service`**, **`doc_path`**, **`text`** | `outcome: appended` or `created` |
 | `update_document` | replace one passage in an existing document | **`service`**, **`doc_path`**, **`old_text`**, **`new_text`** | `outcome: updated` or `outcome: conflict` |
 | `mark_document_obsolete` | flag a document as outdated | **`service`**, **`doc_path`**, **`reason`**, `replaced_by` | `outcome: marked_obsolete` or `already_obsolete` |
 
@@ -16,6 +17,8 @@ Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is arc
 - `doc_path` is relative to the service, ends in `.md`, and has no `..`, for example `docs/api-v2.md`.
 - Every schema is closed: an unknown argument is rejected.
 - Invalid input is an **error result** (`is_error`) whose message names the argument. A **conflict** is a normal result: nothing is written and the caller decides what to do.
+
+`append_to_document` is the simple way to record a new fact: it never needs the old text and never conflicts with it. The line ending style of the file is kept and a blank line separates the new text from the old. Two appends at the very same moment could overwrite each other (single-user workspace; no locking).
 
 ### Conflicts
 

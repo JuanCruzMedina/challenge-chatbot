@@ -7,7 +7,7 @@ from ecosystem_assistant.actions.server import build_server
 from ecosystem_assistant.actions.workspace import Workspace
 from tests.actions.helpers import payload, with_client
 
-EXPECTED = {"add_document", "update_document", "mark_document_obsolete"}
+EXPECTED = {"add_document", "append_to_document", "update_document", "mark_document_obsolete"}
 
 
 def _tools(workspace: Workspace) -> dict[str, Any]:

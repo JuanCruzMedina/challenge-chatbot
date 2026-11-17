@@ -67,3 +67,17 @@ def test_every_method_of_the_catalog_runs_without_error(sample_graph: KnowledgeG
     facts = run_graph_queries(sample_graph, queries)
     assert [f.id for f in facts] == [f"K{i}" for i in range(1, 10)]
     assert all(f.found for f in facts)
+
+
+def test_a_plan_can_list_every_team_and_the_result_is_evidence(sample_graph: KnowledgeGraph) -> None:
+    fact = run_graph_queries(sample_graph, [PlannedQuery("list_entities", {"type": "team"})])[0]
+
+    assert fact.found is True and fact.id == "K1"
+    assert "orders-team" in fact.text and "driver-team" in fact.text
+    assert fact.sources  # cited evidence
+
+
+def test_a_team_overview_is_a_fact_with_the_leads(sample_graph: KnowledgeGraph) -> None:
+    fact = run_graph_queries(sample_graph, [PlannedQuery("team_overview", {"team": "orders-team"})])[0]
+
+    assert "orders-service" in fact.text and "Tomás Aguirre" in fact.text

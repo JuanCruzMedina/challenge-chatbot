@@ -29,7 +29,10 @@ def test_the_catalog_has_the_graph_questions_and_nothing_else() -> None:
     assert set(CATALOG) == {
         "client_overview", "application_services", "service_owner", "api_consumers", "event_flow",
         "service_product_context", "relation_path", "describe", "obsolete_documents",
+        "list_entities", "team_overview",
     }
+    assert CATALOG["list_entities"].required == ("type",)
+    assert CATALOG["team_overview"].required == ("team",)
     assert CATALOG["relation_path"].required == ("start", "end")
     assert CATALOG["obsolete_documents"].required == ()
     assert MAX_QUERIES == 4
@@ -125,3 +128,12 @@ def test_include_obsolete_defaults_to_false_and_only_a_real_boolean_counts(sampl
     assert validate_plan({}, sample_graph).include_obsolete is False
     assert validate_plan({"include_obsolete": True}, sample_graph).include_obsolete is True
     assert validate_plan({"include_obsolete": "yes"}, sample_graph).include_obsolete is False
+
+
+def test_every_catalog_method_exists_on_the_graph_and_is_described(sample_graph: KnowledgeGraph) -> None:
+    from ecosystem_assistant.knowledge.flow.catalog import describe_catalog
+
+    text = describe_catalog()
+    for method in CATALOG:
+        assert callable(getattr(sample_graph, method)), method
+        assert method in text

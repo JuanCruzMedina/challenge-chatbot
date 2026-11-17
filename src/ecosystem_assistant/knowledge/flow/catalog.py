@@ -27,6 +27,9 @@ CATALOG: dict[str, QuerySpec] = {
         QuerySpec("relation_path", ("start", "end"), "shortest chain of relations between two entities"),
         QuerySpec("describe", ("entity",), "every relation of one entity"),
         QuerySpec("obsolete_documents", (), "documents marked as obsolete"),
+        QuerySpec("list_entities", ("type",),
+                  "every entity of one type (team, person, service, client, application, api, event, feature)"),
+        QuerySpec("team_overview", ("team",), "services a team owns and the person who leads each"),
     )
 }
 

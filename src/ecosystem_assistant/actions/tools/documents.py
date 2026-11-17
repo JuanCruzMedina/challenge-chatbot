@@ -66,6 +66,26 @@ def replace_in_document(ws: Workspace, service: str, doc_path: str, old_text: st
     return {"outcome": "updated", "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
 
 
+def append_document(ws: Workspace, service: str, doc_path: str, text: str) -> dict[str, Any]:
+    """Add ``text`` at the end of a document, or create the document; the old text never has to be quoted."""
+    target = ws.resolve_doc(service, doc_path)
+    if not isinstance(text, str) or not text.strip():
+        raise WorkspaceError("text must not be empty")
+    if target.is_file():
+        current = target.read_bytes().decode("utf-8")
+        newline = "\r\n" if "\r\n" in current else "\n"
+        base = current if current.endswith(newline) else current + newline
+        separator = newline if base.strip() else ""
+        updated = base + separator + text.strip().replace("\r\n", "\n").replace("\n", newline) + newline
+        outcome = "appended"
+    else:
+        updated = text.strip() + "\n"
+        outcome = "created"
+    ws.write_atomic(target, updated)
+    ws.audit("append_to_document", service, doc_path)
+    return {"outcome": outcome, "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
+
+
 def set_obsolete(
     ws: Workspace, service: str, doc_path: str, reason: str, replaced_by: str | None
 ) -> dict[str, Any]:
@@ -127,6 +147,23 @@ def register(server: MCPServer, workspace: Workspace) -> None:
         content: Annotated[str, Field(min_length=1, description="Full markdown content of the new document.")],
     ) -> dict[str, Any]:
         return create_document(workspace, service, doc_path, content)
+
+    @server.tool(
+        description=(
+            "Add text at the END of a markdown document, or create the document if it does not exist yet. "
+            "Use it to record a new fact (an owner, a note, a decision) when the user asks to add or write "
+            "something down: nothing has to be quoted from the old text. Do NOT use it to change or remove "
+            "existing text (use update_document), to mark a document obsolete, or to answer questions "
+            "about documentation. Only markdown files of an existing service are accepted. The text "
+            "becomes searchable only after the next ingestion run."
+        )
+    )
+    def append_to_document(
+        service: Service,
+        doc_path: DocPath,
+        text: Annotated[str, Field(min_length=1, description="Markdown text to add at the end of the document.")],
+    ) -> dict[str, Any]:
+        return append_document(workspace, service, doc_path, text)
 
     @server.tool(
         description=(

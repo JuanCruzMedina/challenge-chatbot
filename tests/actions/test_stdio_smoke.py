@@ -43,7 +43,7 @@ def test_subprocess_over_stdio_lists_tools_and_calls_one(tmp_path: Path) -> None
     names, outcome = asyncio.run(run())
     elapsed = time.monotonic() - started
 
-    assert names == {"add_document", "update_document", "mark_document_obsolete"}
+    assert names == {"add_document", "append_to_document", "update_document", "mark_document_obsolete"}
     assert outcome["outcome"] == "created"
     assert (root / "repos" / "notifications-service" / "docs" / "smoke.md").read_text(encoding="utf-8") == "# Smoke\n"
     assert elapsed < 10, f"smoke test took {elapsed:.1f}s"
