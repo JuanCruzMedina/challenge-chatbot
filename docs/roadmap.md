@@ -21,7 +21,7 @@ Working rules that apply to everything below: every step is a spec-driven change
 | --- | --- | --- |
 | 1 | **Agent** (done) | The core criterion: the model alone chooses between the informational and the action route, and MCP tools are discovered at runtime |
 | 2 | **Chat interface** (done; opening the web page is a manual step) | The brief asks for a passive, ready-made UI: a terminal chat first, then LangChain Agent Chat UI served with `langgraph dev` |
-| 3 | **Extensibility demonstration** (done: `create_documentation_ticket`, one new file, see `add-ticket-tool`) | Add a new MCP tool (for example `create_documentation_ticket`) by adding one file, and show the agent using it with no change to its code |
+| 3 | **Extensibility demonstration** (done with throwaway tool modules in the tests and with `append_to_document`; a ticket tool was built and then removed as not useful) | A tool is added by adding one module to the server, and the agent uses it with no change to its code |
 | 4 | **Check against the evaluation criteria** | Walk the six criteria of the brief with evidence from the tests and the measurements |
 | 5 | Optional: expose the solution as an MCP Server for editors such as VS Code or Copilot | Listed as an optional extension in the brief |
 

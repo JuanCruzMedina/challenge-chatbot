@@ -172,4 +172,4 @@ def test_the_models_receive_the_system_prompt_first_and_all_the_tools(workspace_
     turn(workspace_dir, audit_file, tmp_path, chat)
 
     assert chat.seen[0][0].content == SYSTEM_PROMPT
-    assert sorted(chat.bound_tools[0]) == ["add_document", "append_to_document", "create_documentation_ticket", "mark_document_obsolete", "query_knowledge", "update_document"]
+    assert sorted(chat.bound_tools[0]) == ["add_document", "append_to_document", "mark_document_obsolete", "query_knowledge", "update_document"]

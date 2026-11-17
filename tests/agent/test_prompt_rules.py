@@ -53,25 +53,3 @@ def test_after_a_confirmation_a_scripted_turn_writes_once(workspace_dir: Path, a
     assert written.read_text(encoding="utf-8") == "Leo Messi is the Product Owner of orders-team.\n"
     assert "written" in reply.text
 
-
-def test_the_agent_runs_the_ticket_tool_added_to_the_server_without_any_change(
-    workspace_dir: Path, audit_file: Path, tmp_path: Path
-) -> None:
-    """add-ticket-tool: the tool is a new module of the server; the agent only discovers it."""
-    args = {"service": "payments-service", "title": "Document the retry policy",
-            "description": "The retry policy of payments-api is not documented.", "priority": "high"}
-    chat = ScriptedChat(script=[ai_tool("create_documentation_ticket", args), ai_text("Ticket DOC-0001 opened.")])
-
-    async def scenario():
-        async with Agent.open(chat=chat, workspace=workspace_dir, audit_file=audit_file,
-                              knowledge=knowledge_service(workspace_dir, tmp_path)) as agent:
-            assert "create_documentation_ticket" in agent.tool_names
-            return await agent.chat("Open a high priority ticket: the payments retry policy is not documented.")
-
-    reply = run(scenario())
-
-    assert [c.name for c in reply.tool_calls] == ["create_documentation_ticket"]
-    assert not reply.tool_calls[0].error
-    ticket = (workspace_dir / "tickets" / "DOC-0001.md").read_text(encoding="utf-8")
-    assert "service: payments-service" in ticket and "priority: high" in ticket
-    assert "DOC-0001" in reply.text

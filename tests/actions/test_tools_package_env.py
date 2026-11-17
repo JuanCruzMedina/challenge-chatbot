@@ -21,7 +21,7 @@ from ecosystem_assistant.actions.server import (
 from ecosystem_assistant.actions.workspace import Workspace
 from tests.actions.test_extensibility import NEW_TOOL
 
-DEFAULT_NAMES = {"add_document", "append_to_document", "create_documentation_ticket", "update_document", "mark_document_obsolete"}
+DEFAULT_NAMES = {"add_document", "append_to_document", "update_document", "mark_document_obsolete"}
 
 
 def test_the_default_tools_package_is_the_real_one() -> None:

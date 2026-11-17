@@ -19,7 +19,7 @@ from ecosystem_assistant.agent.mcp_tools import McpServerStartError, McpToolbox
 from tests.actions.test_extensibility import NEW_TOOL
 from tests.agent.conftest import run
 
-DEFAULT_NAMES = ["add_document", "append_to_document", "create_documentation_ticket", "mark_document_obsolete", "update_document"]
+DEFAULT_NAMES = ["add_document", "append_to_document", "mark_document_obsolete", "update_document"]
 
 
 def server_processes() -> int:
