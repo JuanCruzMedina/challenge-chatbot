@@ -1,6 +1,7 @@
 """Spec: the Anthropic adapter of the model port, with a fake client (no network, no cost)."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -9,6 +10,8 @@ import anthropic
 import httpx2
 import pytest
 
+from ecosystem_assistant.knowledge.flow.catalog import PLAN_SCHEMA
+from ecosystem_assistant.knowledge.flow.prompts import ANSWER_SCHEMA
 from ecosystem_assistant.llm.anthropic_llm import AnthropicLLM
 from ecosystem_assistant.llm.ledger import BudgetExceededError, Ledger
 from ecosystem_assistant.llm.port import LLMError, LLMOutputError, LLMUnavailableError
@@ -68,13 +71,33 @@ def test_complete_sends_the_prompts_and_returns_the_text(ledger: Ledger) -> None
     assert "temperature" not in request and request["max_tokens"] > 0
 
 
-def test_complete_json_asks_for_the_schema_and_returns_the_object(ledger: Ledger) -> None:
+def test_complete_json_puts_the_schema_in_the_instructions_and_returns_the_object(ledger: Ledger) -> None:
     client = FakeClient(reply('{"answer": "42"}'))
 
-    result = llm(client, ledger).complete_json("sys", "user", SCHEMA)
+    result = llm(client, ledger).complete_json("be brief", "user", SCHEMA)
 
     assert result == {"answer": "42"}
-    assert client.requests[0]["output_config"] == {"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}}
+    request = client.requests[0]
+    assert request["system"].startswith("be brief")           # the caller's own instructions come first
+    assert json.dumps(SCHEMA) in request["system"]            # the schema travels as text
+    assert request["output_config"] == {"effort": "low"}      # no `format`: see the regression test below
+
+
+@pytest.mark.parametrize("schema", [PLAN_SCHEMA, ANSWER_SCHEMA], ids=["plan", "answer"])
+def test_the_real_flow_schemas_are_never_sent_as_a_response_format(schema, ledger: Ledger) -> None:
+    """Regression: the API rejects `output_config.format` for objects that are not closed (`additionalProperties`
+    must be false) and the plan schema has a free-form map of arguments. Found by a real call."""
+    client = FakeClient(reply("{}"))
+
+    llm(client, ledger).complete_json("sys", "user", schema)
+
+    assert "format" not in client.requests[0]["output_config"]
+
+
+@pytest.mark.parametrize("wrapped", ['```json\n{"answer": "42"}\n```', '```\n{"answer": "42"}\n```',
+                                     '  {"answer": "42"}  '])
+def test_json_wrapped_in_a_code_fence_or_spaces_is_still_read(wrapped: str, ledger: Ledger) -> None:
+    assert llm(FakeClient(reply(wrapped)), ledger).complete_json("s", "u", SCHEMA) == {"answer": "42"}
 
 
 def test_invalid_json_is_an_output_error_that_names_the_model(ledger: Ledger) -> None:

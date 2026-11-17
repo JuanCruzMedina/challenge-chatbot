@@ -10,9 +10,11 @@ import pytest
 from ecosystem_assistant.llm.anthropic_chat import anthropic_chat_model
 from ecosystem_assistant.llm.anthropic_llm import AnthropicLLM
 from ecosystem_assistant.llm.ledger import Ledger
+from tests.data.helpers import SAMPLE
 from tests.llm.test_anthropic_chat import Wire, build, message
 from tests.llm.test_anthropic_llm import FakeClient, reply
 
+LIVE = {"LIVE_LLM": "1", "AGENT_DATA_ROOT": str(SAMPLE)}
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "live_check.py"
 
 
@@ -28,7 +30,8 @@ def load_script():
 @pytest.fixture
 def parts(tmp_path: Path):
     ledger = Ledger(tmp_path / "ledger.json", cap_usd=1.0)
-    client = FakeClient(reply('{"answer": "hello"}', 120, 15))
+    plan = '{"graph_queries": [{"method": "service_owner", "arguments": {"service": "tracking-service"}}]}'
+    client = FakeClient(reply(plan, 120, 15))
     wire = Wire(message("ok", input_tokens=20, output_tokens=4),
                 message(None, {"name": "ping", "input": {"x": "hi"}}, input_tokens=90, output_tokens=25))
     return ledger, client, wire, AnthropicLLM(client=client, ledger=ledger), build(wire, ledger)
@@ -58,7 +61,7 @@ def test_the_flag_alone_is_not_enough(parts, capsys) -> None:
 def test_with_both_it_prints_the_estimate_first_then_calls_and_reports_what_was_spent(parts, capsys) -> None:
     ledger, client, wire, llm, chat = parts
 
-    code = load_script().main(["--yes"], env={"LIVE_LLM": "1"}, llm=llm, chat=chat)
+    code = load_script().main(["--yes"], env=LIVE, llm=llm, chat=chat)
 
     lines = capsys.readouterr().out.splitlines()
     assert code == 0
@@ -77,6 +80,6 @@ def test_it_reports_a_failed_check_with_a_nonzero_exit(tmp_path: Path, capsys) -
     llm = AnthropicLLM(client=FakeClient(reply("not json")), ledger=ledger)
     chat = build(Wire(message("ok")), ledger)
 
-    code = load_script().main(["--yes"], env={"LIVE_LLM": "1"}, llm=llm, chat=chat)
+    code = load_script().main(["--yes"], env=LIVE, llm=llm, chat=chat)
 
     assert code == 1 and "FAIL" in capsys.readouterr().out

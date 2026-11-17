@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .env
 .chroma/
-.cost_ledger.json
+.cost_ledger.json*
 .DS_Store
 var/
 .langgraph_api/

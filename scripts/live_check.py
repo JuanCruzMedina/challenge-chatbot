@@ -14,13 +14,12 @@ import argparse
 import os
 import sys
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from langchain_core.tools import tool
 
 EST_CALLS, EST_INPUT_TOKENS, EST_OUTPUT_TOKENS = 3, 500, 200   # deliberately above what the three calls use
-FLOW_SCHEMA = {"type": "object", "properties": {"answer": {"type": "string"}}, "required": ["answer"],
-               "additionalProperties": False}
 
 
 @tool
@@ -68,9 +67,16 @@ def main(argv: list[str] | None = None, env: Mapping[str, str] | None = None, ll
             print(f"{label}: FAIL - {type(exc).__name__}: {str(exc)[:160]}")
 
     def flow() -> str:
-        result = llm.complete_json("Answer in JSON.", "Say hello in one word.", FLOW_SCHEMA)
-        assert isinstance(result.get("answer"), str), result
-        return f"JSON with an answer ({result['answer'][:30]!r})"
+        # The flow's real planning request: its own prompt and its own (open) schema, the one that once got a 400.
+        from ecosystem_assistant.knowledge.flow import prompts
+        from ecosystem_assistant.knowledge.flow.catalog import PLAN_SCHEMA
+        from ecosystem_assistant.knowledge.graph.build import build_graph
+
+        graph = build_graph(Path(env.get("AGENT_DATA_ROOT") or "var/workspace"))
+        result = llm.complete_json(prompts.plan_system(graph), prompts.plan_user("Who owns the tracking service?"),
+                                   PLAN_SCHEMA)
+        assert isinstance(result.get("graph_queries"), list) and result["graph_queries"], result
+        return f"a plan with {len(result['graph_queries'])} graph queries"
 
     def agent_reply() -> str:
         return f"reply {chat.invoke('Reply with: ok').content[:30]!r}"
