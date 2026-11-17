@@ -39,6 +39,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 - **Why:** the informational graph (retrieve, query KG, synthesize) stays explicit as a `StateGraph`. The agent decides with tool-calling, with no `if/else`. LangChain Agent Chat UI, the recommended UI, connects directly to LangGraph graphs.
 - **Rejected alternatives:** plain LangChain agents (the centralized pipeline is less visible), CrewAI (built for agent teams), a hand-written loop with the SDK (no ready-made UI).
 - **Implemented** as the informational flow in `ecosystem_assistant.knowledge.flow` (change `add-informational-flow`): a five-stage LangGraph pipeline. See `docs/informational-flow.md`. LangSmith tracing, which LangGraph pulls in, is forced off.
+- **The agent** is a second, hand-written LangGraph graph with two nodes (`model`, `tools`) and one branch; see `docs/agent.md`.
 
 ## D4. Vector store: local Chroma — accepted
 
@@ -66,7 +67,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 
 - It is the **only** mechanism for executing actions, and it is not part of the informational graph.
 - Correct MCP schemas: a name, a clear description and an `inputSchema` (JSON Schema) on every tool.
-- Tools are **discovered dynamically** by an MCP client (`langchain-mcp-adapters`). Adding a new tool does not touch the agent.
+- Tools are **discovered dynamically** by an MCP client: our own small bridge (`agent/mcp_tools.py`), because `langchain-mcp-adapters` would have downgraded `mcp` from 2.x to 1.30. Adding a new tool does not touch the agent (see [agent.md](agent.md)).
 - Actions operate on invented, local data, in a git-ignored workspace copied from the sample data. Nothing is published.
 - Built with `mcp` 2.x (`MCPServer`, which replaced `FastMCP`); details and SDK findings in the archived change `add-mcp-actions-server`.
 
@@ -78,6 +79,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 - **The model** decides the route from the tool descriptions. `if/else` and keyword routing are **forbidden** in the agent logic.
 - Tool descriptions are part of the design: they are what the model uses to decide.
 - The informational graph is already built as `InformationalFlow.ask(question)`, which returns a cited answer, a status and a trace; the agent will wrap it as the single knowledge tool. Inside the flow the model plans graph queries as one validated JSON object (small local models are more reliable at that than at multi-turn tool loops); native tool-calling is reserved for the agent's choice between the informational and action tools.
+- Implemented in `src/ecosystem_assistant/agent/`; see [agent.md](agent.md). The agent never names an MCP tool (tested), discovers the server's tools at the start of every turn, and its loop has one branch: whether the model asked for tools.
 
 ## D8. UI: terminal first — accepted
 

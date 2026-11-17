@@ -38,7 +38,7 @@ Marking twice changes nothing. Ingestion can read this block later.
 
 ## Workspace
 
-The tools never write to the committed sample data. They write to a **workspace**, a git-ignored working copy:
+The tools never write to the committed sample data. They write to a **workspace**, a git-ignored working copy of the **whole** sample ecosystem (company, clients, repos, ...), so the same folder is also a complete data root that the knowledge graph and the index can read:
 
 ```bash
 uv run python scripts/seed_workspace.py      # create, or reset to a fresh copy
@@ -49,9 +49,11 @@ uv run python scripts/seed_workspace.py      # create, or reset to a fresh copy
 | `DOCS_WORKSPACE` | `var/workspace` | Root of the workspace (`<root>/repos/<service>/...`) |
 | `ACTIONS_AUDIT_FILE` | `var/audit/actions.jsonl` | One JSON line per successful write |
 
-The seed script deletes only inside a workspace it created itself (it leaves a `.seeded-workspace` marker) and refuses to touch anything else.
+The seed script replaces only its known entries (`company.yaml`, `company/`, `clients/`, `repos/`, `prs/`, the README), only inside a workspace it created itself (it leaves a `.seeded-workspace` marker), and refuses to touch anything else.
 
-Written documents are **not searchable** until the ingestion pipeline runs: the server never touches the index.
+Written documents are **not searchable** until the index is synchronized: the server never touches the index. The agent's knowledge tool synchronizes before every question (see `docs/agent.md`).
+
+Other variables: `ACTIONS_TOOLS_PACKAGE` (the tools package to load, default the real one; used by tests and demonstrations to start the server with another package) and `ACTIONS_LOG_LEVEL` (default `WARNING`, so a chat is not flooded by the server's INFO lines).
 
 ## Run it
 

@@ -1,0 +1,138 @@
+# Routing evaluation of the agent (graded without a judge model).
+#
+# Every turn is run in a fresh, seeded workspace, so what one turn does cannot influence another.
+#
+# kind:
+#   question     a question: only the knowledge tool may be called, never an MCP tool
+#   action       a request to change a document: the MCP tool named in expect_tools must be called and the effect
+#                must be in the workspace
+#   mixed        look something up and then write it down: both tools, the knowledge tool first
+#   chat         a greeting or thanks: no tool at all
+#   unsupported  something no tool can do: no MCP tool may be called (the knowledge tool may be used to check)
+#
+# expect_tools   the distinct tools that must be called, in the order they are first called
+# allow_tools    tools that may also be called without penalty; any other tool called fails the turn
+# expect_facts   words the reply must contain (whole words, ignoring case and separators)
+# expect_effect  the file that must exist in the workspace afterwards: it must contain every `contains` text and
+#                none of the `absent` texts. A turn without expect_effect must leave the workspace untouched.
+turns:
+  - id: q01
+    kind: question
+    message: "Who owns the tracking service and who leads it?"
+    expect_tools: [query_knowledge]
+    expect_facts: ["tracking-team", "Bruno Salas"]
+
+  - id: q02
+    kind: question
+    message: "Which services consume the payments API?"
+    expect_tools: [query_knowledge]
+    expect_facts: ["orders-service"]
+
+  - id: q03
+    kind: question
+    message: "A customer sees a stale price. What should we do?"
+    expect_tools: [query_knowledge]
+    expect_facts: ["cache"]
+
+  - id: q04
+    kind: question
+    message: "Which product vision applies to the driver service?"
+    expect_tools: [query_knowledge]
+    expect_facts: ["logistics"]
+
+  - id: q05
+    kind: question
+    message: "How many requests per minute may a consumer make to the tracking API?"
+    expect_tools: [query_knowledge]
+    expect_facts: ["300"]
+
+  - id: q06
+    kind: question
+    message: "Which applications does Demo Logistics have?"
+    expect_tools: [query_knowledge]
+    expect_facts: ["fleet tracker", "driver app"]
+
+  - id: a01
+    kind: action
+    message: >-
+      Please create a new document docs/runbook-restart-queue.md for the notifications-service. Its title is
+      "Restart the queue" and its text is "Restart the email queue when it grows beyond ten thousand messages."
+    expect_tools: [add_document]
+    allow_tools: [query_knowledge]
+    expect_effect:
+      path: repos/notifications-service/docs/runbook-restart-queue.md
+      contains: ["ten thousand messages"]
+
+  - id: a02
+    kind: action
+    message: >-
+      In the document docs/api-v1.md of the payments-service, change the external provider timeout from
+      20 seconds to 30 seconds.
+    expect_tools: [update_document]
+    allow_tools: [query_knowledge]
+    expect_effect:
+      path: repos/payments-service/docs/api-v1.md
+      contains: ["30 seconds"]
+      absent: ["timeout: 20 seconds"]
+
+  - id: a03
+    kind: action
+    message: >-
+      Mark the document docs/api-v1.md of the payments-service as obsolete, because payments-api v2 replaces it.
+    expect_tools: [mark_document_obsolete]
+    allow_tools: [query_knowledge]
+    expect_effect:
+      path: repos/payments-service/docs/api-v1.md
+      contains: ["status: obsolete"]
+
+  - id: a04
+    kind: action
+    message: >-
+      Add a document docs/overview.md to the driver-service saying that it delivers the assigned routes to drivers.
+    expect_tools: [add_document]
+    allow_tools: [query_knowledge]
+    expect_effect:
+      path: repos/driver-service/docs/overview.md
+      contains: ["routes"]
+
+  - id: m01
+    kind: mixed
+    message: >-
+      Find out who leads the tracking service and write it down in a new document docs/lead.md of the
+      tracking-service.
+    expect_tools: [query_knowledge, add_document]
+    expect_effect:
+      path: repos/tracking-service/docs/lead.md
+      contains: ["Bruno Salas"]
+
+  - id: m02
+    kind: mixed
+    message: >-
+      Check which team owns the catalog service and then add a document docs/owner.md to the catalog-service
+      that says so.
+    expect_tools: [query_knowledge, add_document]
+    expect_effect:
+      path: repos/catalog-service/docs/owner.md
+      contains: ["catalog-team"]
+
+  - id: c01
+    kind: chat
+    message: "Hello!"
+    expect_tools: []
+
+  - id: c02
+    kind: chat
+    message: "Thanks, that is all for now."
+    expect_tools: []
+
+  - id: u01
+    kind: unsupported
+    message: "Delete the orders-service completely."
+    expect_tools: []
+    allow_tools: [query_knowledge]
+
+  - id: u02
+    kind: unsupported
+    message: "Send an email to the payments team telling them about the outage."
+    expect_tools: []
+    allow_tools: [query_knowledge]

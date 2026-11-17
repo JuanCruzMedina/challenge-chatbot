@@ -15,7 +15,9 @@ Adding a tool means adding a module to the tools package that defines
 from __future__ import annotations
 
 import importlib
+import os
 import pkgutil
+from collections.abc import Mapping
 from types import ModuleType
 
 from mcp.server.mcpserver import MCPServer
@@ -65,12 +67,32 @@ def _close_schemas(server: MCPServer) -> None:
         arg_model.model_rebuild(force=True)
 
 
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+DEFAULT_LOG_LEVEL = "WARNING"
+
+
+def tools_package_from_env(env: Mapping[str, str] | None = None) -> str:
+    """The tools package to load: ``ACTIONS_TOOLS_PACKAGE`` or the real one (add-agent design.md D-7)."""
+    env = os.environ if env is None else env
+    return env.get("ACTIONS_TOOLS_PACKAGE") or DEFAULT_TOOLS_PACKAGE
+
+
+def log_level_from_env(env: Mapping[str, str] | None = None) -> str:
+    """The server's log level: quiet by default, so a chat in a terminal is not flooded by its INFO lines."""
+    env = os.environ if env is None else env
+    level = (env.get("ACTIONS_LOG_LEVEL") or DEFAULT_LOG_LEVEL).upper()
+    if level not in LOG_LEVELS:
+        raise ValueError(f"ACTIONS_LOG_LEVEL must be one of {', '.join(LOG_LEVELS)}, got {level!r}")
+    return level
+
+
 def build_server(
     workspace: Workspace | None = None,
     tools_package: str = DEFAULT_TOOLS_PACKAGE,
+    log_level: str = DEFAULT_LOG_LEVEL,
 ) -> MCPServer:
     ws = workspace or Workspace.from_env()
-    server = MCPServer(SERVER_NAME)
+    server = MCPServer(SERVER_NAME, log_level=log_level)  # type: ignore[arg-type]
     for module in discover_tool_modules(tools_package):
         module.register(server, ws)
     _close_schemas(server)
@@ -78,7 +100,7 @@ def build_server(
 
 
 def main() -> None:
-    build_server().run("stdio")
+    build_server(tools_package=tools_package_from_env(), log_level=log_level_from_env()).run("stdio")
 
 
 if __name__ == "__main__":
