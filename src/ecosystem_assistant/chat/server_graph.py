@@ -35,5 +35,12 @@ async def open_graph(chat: BaseChatModel | None = None, **agent_options: Any) ->
         yield build_agent_graph(model, agent.tools, SYSTEM_PROMPT, translate_error=translate_model_error())
 
 
-# What ``langgraph.json`` points at: LangGraph calls it on every run, with everything taken from the environment.
-agent_graph = open_graph
+@asynccontextmanager
+async def agent_graph() -> AsyncIterator[Any]:
+    """What ``langgraph.json`` points at. LangGraph calls it on every run, with everything taken from the environment.
+
+    It takes no arguments on purpose: the server inspects the signature and refuses any parameter that is not its
+    own ``config`` or ``runtime`` (found by running the real server; ``open_graph`` has optional parameters).
+    """
+    async with open_graph() as graph:
+        yield graph

@@ -141,3 +141,17 @@ def test_the_factory_makes_no_blocking_call_on_the_event_loop(
         run(scenario())
     finally:
         blockbuster.deactivate()
+
+
+def test_the_graph_entry_is_accepted_by_langgraphs_own_factory_check() -> None:
+    """Regression: `langgraph dev` refused to start because the entry had parameters it does not accept.
+
+    The check below is the server's own (`classify_factory`), applied to the exact callable `langgraph.json` names.
+    """
+    from langgraph_api._factory_utils import classify_factory
+
+    config = json.loads((ROOT / "langgraph.json").read_text(encoding="utf-8"))
+    module_path, _, attribute = config["graphs"]["agent"].partition(":")
+    module = importlib.import_module(module_path.removeprefix("./src/").removesuffix(".py").replace("/", "."))
+
+    classify_factory(getattr(module, attribute), "agent-regression-check")  # raises ValueError when the server would refuse it
