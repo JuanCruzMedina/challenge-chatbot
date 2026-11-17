@@ -13,6 +13,7 @@ FORBIDDEN_INTERNAL = (
     "ecosystem_assistant.graph",
     "ecosystem_assistant.agent",
     "ecosystem_assistant.ingestion",
+    "ecosystem_assistant.llm",
 )
 # Vector store, graph, embedding and LLM client libraries.
 FORBIDDEN_EXTERNAL = (

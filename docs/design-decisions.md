@@ -38,6 +38,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 
 - **Why:** the informational graph (retrieve, query KG, synthesize) stays explicit as a `StateGraph`. The agent decides with tool-calling, with no `if/else`. LangChain Agent Chat UI, the recommended UI, connects directly to LangGraph graphs.
 - **Rejected alternatives:** plain LangChain agents (the centralized pipeline is less visible), CrewAI (built for agent teams), a hand-written loop with the SDK (no ready-made UI).
+- **Implemented** as the informational flow in `ecosystem_assistant.knowledge.flow` (change `add-informational-flow`): a five-stage LangGraph pipeline. See `docs/informational-flow.md`. LangSmith tracing, which LangGraph pulls in, is forced off.
 
 ## D4. Vector store: local Chroma — accepted
 
@@ -76,6 +77,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
   2. The MCP Server's tools, listed at startup.
 - **The model** decides the route from the tool descriptions. `if/else` and keyword routing are **forbidden** in the agent logic.
 - Tool descriptions are part of the design: they are what the model uses to decide.
+- The informational graph is already built as `InformationalFlow.ask(question)`, which returns a cited answer, a status and a trace; the agent will wrap it as the single knowledge tool. Inside the flow the model plans graph queries as one validated JSON object (small local models are more reliable at that than at multi-turn tool loops); native tool-calling is reserved for the agent's choice between the informational and action tools.
 
 ## D8. UI: terminal first — accepted
 
@@ -92,6 +94,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 - Ollama is not installed yet. Installing it is a global change and happens only with prior notice.
 - Main risk: small local models choose between tools less reliably. Mitigated with very clear tool descriptions and a small set of test cases, and the results are documented.
 - The provider is defined in **one place** (an environment variable), so switching to the API does not touch the agent.
+- *Updated 2026-11-17:* Ollama 0.40.16 is installed (Homebrew) and the model is `qwen2.5:7b-instruct` (4.7 GB). It runs on this 18 GB machine at about 7 seconds per question. The model layer is `ecosystem_assistant.llm`; measurements are in `docs/informational-flow.md`. Cost so far: $0.
 
 ### Alternative with the Anthropic API (not the default)
 

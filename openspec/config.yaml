@@ -42,8 +42,8 @@ rules:
       change.'
     - 'capability_shape: One capability per feature across every layer, named
       `<module>-<feature>`. Modules: `ecosystem-data`, `mcp-actions`,
-      `knowledge-graph`, `knowledge-retrieval`, `agent`, `ingestion`, `ui`,
-      `platform`.'
+      `knowledge-graph`, `knowledge-retrieval`, `knowledge-flow`, `agent`,
+      `ingestion`, `ui`, `platform`.'
     - 'invariants_echo: When the change touches routing, tools or the
       informational/action boundary, restate the relevant architecture
       invariant in the change artifacts.'

@@ -1,0 +1,90 @@
+# End-to-end evaluation of the informational flow (graded without a judge model).
+#
+# kind:
+#   graph     answerable from the knowledge graph
+#   document  answerable from the text of one document
+#   combined  needs both a graph fact and a document
+#   unknown   nothing in the data relates to it: the flow must say there is no evidence
+#   absent    about the domain but not in the data: the flow may say there is no evidence, or answer that the
+#             information is missing (graded with a simple wording check, so it is the weakest grade)
+#
+# A graded question passes when the answer is `answered` and grounded, cites the expected source files
+# (`source_mode: any` needs one of them, `all` needs every one) and states every key fact
+# (whole words of the answer, ignoring case and separators: `fleet-tracker` matches "Fleet Tracker"). Paths are relative to data/ecosystem.
+questions:
+  - id: f01
+    kind: graph
+    question: "Which service consumes the payments API, and which application does it belong to?"
+    expect_sources: ["repos/orders-service/service.yaml"]
+    expect_facts: ["orders-service", "storefront"]
+
+  - id: f02
+    kind: graph
+    question: "Who owns the tracking service and who leads it?"
+    expect_sources: ["repos/tracking-service/service.yaml"]
+    expect_facts: ["tracking-team", "Bruno Salas"]
+
+  - id: f03
+    kind: graph
+    question: "Which services subscribe to the payment.failed event?"
+    expect_sources: ["repos/notifications-service/service.yaml", "repos/orders-service/service.yaml"]
+    source_mode: all
+    expect_facts: ["notifications-service", "orders-service"]
+
+  - id: f04
+    kind: graph
+    question: "Which applications does Demo Logistics have, and which services does each one contain?"
+    expect_sources: ["company.yaml"]
+    expect_facts: ["fleet-tracker", "driver-app", "driver-service"]
+
+  - id: f05
+    kind: graph
+    question: "Which product vision applies to the driver service?"
+    expect_sources: ["clients/demo-logistics/product/vision.md"]
+    expect_facts: ["logistics"]
+
+  - id: f06
+    kind: document
+    question: "A customer sees a stale price. What should we do?"
+    expect_sources: ["repos/catalog-service/docs/runbook-stale-prices.md"]
+    expect_facts: ["cache"]
+
+  - id: f07
+    kind: document
+    question: "How long does the card payment provider have before a charge is marked as failed?"
+    expect_sources: ["repos/payments-service/docs/api-v1.md"]
+    expect_facts: ["20"]
+
+  - id: f08
+    kind: document
+    question: "How many requests per minute may a consumer make to the tracking API?"
+    expect_sources: ["repos/tracking-service/docs/api.md"]
+    expect_facts: ["300"]
+
+  - id: f09
+    kind: combined
+    question: >-
+      Who owns the service that stores vehicle positions, and what does its runbook say about a vehicle
+      that stopped sending positions?
+    expect_sources: ["repos/tracking-service/service.yaml", "repos/tracking-service/docs/runbook-missing-positions.md"]
+    source_mode: all
+    expect_facts: ["tracking-team"]
+
+  - id: f10
+    kind: combined
+    question: "Which service consumes the catalog API, and what is the request limit of that API?"
+    expect_sources: ["repos/orders-service/service.yaml", "repos/catalog-service/docs/api.md"]
+    source_mode: all
+    expect_facts: ["orders-service", "200"]
+
+  - id: f11
+    kind: unknown
+    question: "What is the capital of France?"
+
+  - id: f12
+    kind: unknown
+    question: "How do I bake sourdough bread at home?"
+
+  - id: f13
+    kind: absent
+    question: "Who is the CEO of the studio?"
