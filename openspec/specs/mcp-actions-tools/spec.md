@@ -133,3 +133,56 @@ The MCP Server SHALL NOT depend on the vector store, the knowledge graph, the re
 - **GIVEN** an environment with no network and no API keys
 - **WHEN** the server is started over stdio and a tool is called
 - **THEN** the call completes successfully
+
+### Requirement: Text can be appended to a document without quoting it
+The server SHALL offer `append_to_document(service, doc_path, text)`. It MUST add the text at the end of an existing markdown document, or create the document when it does not exist, using the same path rules as the other tools, and MUST record the action in the audit log.
+
+#### Scenario: Appending to an existing document
+- **GIVEN** `docs/lead.md` exists in a service
+- **WHEN** the tool is called with new text
+- **THEN** the original content is unchanged and the new text follows it
+- **AND** the outcome is `appended` and the audit log has one entry
+
+#### Scenario: Appending to a missing document creates it
+- **GIVEN** `docs/team.md` does not exist
+- **WHEN** the tool is called
+- **THEN** the file is created with the text and the outcome is `created`
+
+#### Scenario: Invalid input is refused and nothing is written
+- **GIVEN** an unknown service, a path outside the service, a non-markdown path or empty text
+- **WHEN** the tool is called
+- **THEN** an error is returned and no file changes
+
+#### Scenario: The agent discovers the tool without being changed
+- **GIVEN** the real server
+- **WHEN** the agent lists its tools
+- **THEN** `append_to_document` is present and its name appears nowhere in the agent source
+
+### Requirement: A documentation ticket can be created
+The server SHALL offer `create_documentation_ticket(service, title, description, priority)`. It MUST write a markdown file `tickets/DOC-NNNN.md` at the workspace root, with the next free number, front matter holding the id, service, title, priority, status `open` and creation date, and the description as body; MUST return the id and path; MUST record the action in the audit log; and MUST NOT write inside `repos/`.
+
+#### Scenario: A ticket is created with the next number
+- **GIVEN** a workspace with no tickets
+- **WHEN** the tool is called twice for an existing service
+- **THEN** `tickets/DOC-0001.md` and `tickets/DOC-0002.md` exist with the given title, description and `status: open`
+- **AND** the results carry the ids and the audit log has two entries
+
+#### Scenario: Invalid input is refused and nothing is written
+- **GIVEN** an unknown service, an empty title, a title with a line break, an empty description or an unknown priority
+- **WHEN** the tool is called
+- **THEN** an error that names the argument is returned and no ticket exists
+
+#### Scenario: Two simultaneous creations never share a number
+- **GIVEN** two calls made at the same time
+- **WHEN** both finish
+- **THEN** two files with different numbers exist
+
+#### Scenario: Tickets are not part of the informational sources
+- **GIVEN** a ticket was created
+- **WHEN** the retrieval index is synced
+- **THEN** the ticket is not indexed
+
+#### Scenario: The tool has a correct schema
+- **GIVEN** the real server
+- **WHEN** its tools are listed
+- **THEN** `create_documentation_ticket` has a description that says when not to use it and a closed schema with `service`, `title` and `description` required
