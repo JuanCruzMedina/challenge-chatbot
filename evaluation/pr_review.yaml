@@ -1,0 +1,88 @@
+# Invented pull requests for scripts/eval_pr_review.py (all data is made up).
+#
+# kind:
+#   new        a behavior no document covers: a new markdown file of the service must mention every phrase of
+#              `new_mentions`
+#   update     a behavior an existing document states: that file must no longer contain `removed` (it did before)
+#              and must now contain at least one phrase of `added_any` (none was there before)
+#   unchanged  a change that does not deserve documentation: no markdown file may change
+#
+# Phrases are compared as words, ignoring case and punctuation.
+cases:
+  - id: r01
+    kind: new
+    pr:
+      id: PR-201
+      repo: demo-grocery/orders-service
+      title: "Coupon codes at checkout"
+      description: >
+        Customers can apply one coupon code per order. The discount is applied before the payment is requested, so
+        the charge is for the discounted total. An unknown or expired coupon rejects the order with a clear error and
+        nothing is charged. Each coupon can be used once per customer.
+      changes:
+        - {path: src/coupons.py, status: added, patch: "+def apply_coupon(order, code): ..."}
+        - {path: src/checkout.py, status: modified, patch: "+    order = apply_coupon(order, code)"}
+    expect:
+      new_mentions: ["coupon"]
+
+  - id: r02
+    kind: update
+    pr:
+      id: PR-202
+      repo: demo-grocery/payments-service
+      title: "Automatic retries for payments-api v1"
+      description: >
+        payments-api v1 now retries a failed charge automatically, up to 3 times, before reporting FAILED.
+        Consumers no longer have to create a new charge after a failure.
+      changes:
+        - {path: src/charges.py, status: modified, patch: "+MAX_RETRIES = 3"}
+    expect:
+      path: repos/payments-service/docs/api-v1.md
+      removed: "v1 does **not** support automatic retries"
+      added_any: ["3 times", "three times", "up to 3", "up to three", "now retries", "retries failed charges"]
+
+  - id: r03
+    kind: unchanged
+    pr:
+      id: PR-203
+      repo: demo-grocery/orders-service
+      title: "Rename helper functions and split a module"
+      description: "Internal refactor: renames helpers and splits utils into two modules. No behavior change."
+      changes:
+        - {path: src/utils.py, status: deleted}
+        - {path: src/order_utils.py, status: added}
+        - {path: src/format_utils.py, status: added}
+    expect: {}
+
+  - id: r04
+    kind: unchanged
+    pr:
+      id: PR-204
+      repo: demo-logistics/tracking-service
+      title: "Add unit tests for the position parser"
+      description: "Only tests are added. No production code changes."
+      changes:
+        - {path: tests/test_position_parser.py, status: added}
+    expect: {}
+
+  - id: r05
+    kind: unchanged
+    pr:
+      id: PR-205
+      repo: demo-grocery/notifications-service
+      title: "Fix typo in a log message"
+      description: "Fixes the spelling of 'recieved' in a log line. Nothing else."
+      changes:
+        - {path: src/mailer.py, status: modified, patch: "-log('email recieved')\n+log('email received')"}
+    expect: {}
+
+  - id: r06
+    kind: unchanged
+    pr:
+      id: PR-206
+      repo: demo-grocery/catalog-service
+      title: "Bump dependencies"
+      description: "Updates three third-party libraries to their latest patch versions. No code changes."
+      changes:
+        - {path: requirements.txt, status: modified, patch: "-httpx==0.27.0\n+httpx==0.27.2"}
+    expect: {}

@@ -37,7 +37,7 @@ Working rules that apply to everything below: every step is a spec-driven change
 
 ### B. Keeping knowledge in step with the code
 
-- **Ingestion from pull requests.** The sample has one simulated PR. The next step is a function that applies a PR to the workspace so that graph and index follow; the retrieval sync and the graph rebuild already work per file, and the agent already refreshes before each question. Triggering from a real PR (a CI job or a webhook) comes after, with real repositories and a local model only (see `responsible-ai-usage`).
+- **Ingestion from pull requests.** *First step built:* `python -m ecosystem_assistant.pr_review` reviews the documentation of a merged PR with the agent (see [pr-review.md](pr-review.md)); a real-model run of its review set is pending. What follows is below. The sample has one simulated PR. The next step is a function that applies a PR to the workspace so that graph and index follow; the retrieval sync and the graph rebuild already work per file, and the agent already refreshes before each question. Triggering from a real PR (a CI job or a webhook) comes after, with real repositories and a local model only (see `responsible-ai-usage`).
 - **Read every document of a service, not only the listed ones** (observed in the retrieval change).
 - **Real repositories.** Read OpenAPI files, `CODEOWNERS` and package manifests to build the graph instead of hand-written manifests.
 
