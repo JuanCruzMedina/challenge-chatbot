@@ -116,6 +116,13 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 5. **Local embeddings**, at zero cost.
 6. Prompt caching and short outputs where possible.
 
+**Built (change `add-anthropic-provider`, 2026-11-17).** `LLM_PROVIDER=anthropic` switches the flow and the agent at once; the default stays `ollama`. Details in [agent.md](agent.md#using-claude-instead-of-the-local-model). What was verified, not assumed:
+- *Authentication:* `ANTHROPIC_API_KEY` if it has a value, otherwise the session of `ant auth login` (the SDK refreshes the token). The bare SDK does this alone; `langchain-anthropic` sends an empty key and fails, so `SessionChatAnthropic` drops an empty key. That uses a private property of `langchain-anthropic`, so the dependency is pinned and a test covers it.
+- *Models:* Haiku 5.5 only has a price in `llm/pricing.py`; any other model is refused until its price is added (control: no pricier model without approval). `temperature` does not exist in this SDK and effort is `low`.
+- *Cap in code (control 2):* one ledger, `.cost_ledger.json`, shared by the flow and the agent; it refuses the next call once the estimated total reaches `ANTHROPIC_MAX_USD` (default $1.00). It counts input and output tokens only, so it is an **estimate, not an invoice**. The spending limit in the Console is still the only real guarantee (control 1) and is the user's to set.
+- *Tests (control 3):* the whole suite runs with the API pointed at `127.0.0.1:9` and the developer's key, provider and model removed, so a stray call fails to connect instead of costing money. Real calls only through `scripts/live_check.py` with `LIVE_LLM=1` and `--yes`, which prints its estimate first (control 4).
+- *Architecture:* the Anthropic SDK is imported only inside the `llm` package; this relaxed the earlier rule "Ollama is the only provider".
+
 **Note:** a Claude subscription does not include API credits. The API is billed separately in the Console.
 
 ## D10. Environment — accepted

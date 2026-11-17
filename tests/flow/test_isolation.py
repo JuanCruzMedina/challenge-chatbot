@@ -17,7 +17,7 @@ LLM_PACKAGE = SRC / "llm"
 ACTIONS_PACKAGE = SRC / "actions"
 
 FORBIDDEN_INTERNAL = ("ecosystem_assistant.actions", "ecosystem_assistant.agent", "ecosystem_assistant.ingestion")
-# The MCP SDK and every model provider except Ollama (the one allowed provider, and only inside the llm package).
+# The MCP SDK and every model provider except Ollama and Anthropic (the allowed providers, and only inside the llm package).
 FORBIDDEN_EXTERNAL = (
     "mcp", "anthropic", "openai", "litellm", "cohere", "mistralai", "google", "langchain_anthropic",
     "langchain_openai", "langchain_ollama", "sentence_transformers", "requests",
@@ -35,14 +35,17 @@ def imports_of(root: Path) -> list[tuple[str, str]]:
     return found
 
 
-def forbidden_in(root: Path) -> list[str]:
+def forbidden_in(root: Path, allowed: tuple[str, ...] = ()) -> list[str]:
     return [f"{f}: imports {n}" for f, n in imports_of(root)
-            if n.startswith(FORBIDDEN_INTERNAL) or n.split(".")[0] in FORBIDDEN_EXTERNAL]
+            if n.startswith(FORBIDDEN_INTERNAL)
+            or (n.split(".")[0] in FORBIDDEN_EXTERNAL and n.split(".")[0] not in allowed)]
 
 
 def test_the_flow_and_model_packages_have_no_forbidden_imports() -> None:
     assert forbidden_in(FLOW_PACKAGE) == []
-    assert forbidden_in(LLM_PACKAGE) == []
+    # Anthropic is the second allowed provider (change add-anthropic-provider), and only inside the llm package:
+    # tests/llm/test_provider_isolation.py checks that nothing else imports its SDK.
+    assert forbidden_in(LLM_PACKAGE, allowed=("anthropic", "langchain_anthropic")) == []
 
 
 def test_the_detector_flags_forbidden_imports(tmp_path: Path) -> None:

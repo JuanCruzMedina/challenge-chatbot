@@ -9,18 +9,37 @@ from collections.abc import Callable, Mapping
 
 import httpx
 import ollama
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_ollama import ChatOllama
 
-from ecosystem_assistant.llm.settings import OllamaSettings, ollama_settings_from_env
+from ecosystem_assistant.llm.anthropic_errors import explain_anthropic_error
+from ecosystem_assistant.llm.ledger import BudgetExceededError
+from ecosystem_assistant.llm.pricing import DEFAULT_MODEL
+from ecosystem_assistant.llm.settings import AGENT_PROVIDERS, OllamaSettings, ollama_settings_from_env
 
 
 class AgentModelError(RuntimeError):
     """The agent's model cannot be used. The message says what to do; no other model is tried."""
 
 
-def chat_model_from_env(env: Mapping[str, str] | None = None) -> ChatOllama:
-    """The local model that decides which tool to call. Temperature is zero; nothing leaves the machine."""
-    settings = ollama_settings_from_env(os.environ if env is None else env)
+def chat_model_from_env(env: Mapping[str, str] | None = None) -> BaseChatModel:
+    """The model that decides which tool to call, chosen by ``LLM_PROVIDER`` (default ``ollama``, local and free).
+
+    Creating it never connects anywhere. With ``anthropic`` every call is checked against the spending ledger.
+    """
+    env = os.environ if env is None else env
+    provider = env.get("LLM_PROVIDER") or "ollama"
+    if provider == "anthropic":
+        from ecosystem_assistant.llm.anthropic_chat import anthropic_chat_model
+        from ecosystem_assistant.llm.ledger import Ledger
+
+        return anthropic_chat_model(model=env.get("ANTHROPIC_MODEL") or None, ledger=Ledger.from_env(env))
+    if provider != "ollama":
+        raise ValueError(
+            f"Unknown LLM_PROVIDER {provider!r} for the agent. Valid providers for the agent: "
+            f"{', '.join(AGENT_PROVIDERS)}"
+        )
+    settings = ollama_settings_from_env(env)
     return ChatOllama(
         model=settings.model,
         base_url=settings.host,
@@ -37,6 +56,11 @@ def translate_model_error(settings: OllamaSettings | None = None) -> Callable[[E
     s = settings or ollama_settings_from_env()
 
     def translate(exc: Exception) -> Exception:
+        if isinstance(exc, BudgetExceededError):  # the Anthropic spending cap: its message says how to change it
+            return AgentModelError(str(exc))
+        anthropic_message = explain_anthropic_error(exc, os.environ.get("ANTHROPIC_MODEL") or DEFAULT_MODEL)
+        if anthropic_message is not None:
+            return AgentModelError(anthropic_message)
         if isinstance(exc, (httpx.HTTPError, ConnectionError, TimeoutError)):
             return AgentModelError(
                 f"Cannot reach the model server at {s.host} ({exc}). Start it with `ollama serve`, and make sure the "

@@ -7,7 +7,8 @@ from dataclasses import dataclass
 
 from ecosystem_assistant.llm.port import LLM
 
-PROVIDERS = ("ollama", "fake")
+PROVIDERS = ("ollama", "anthropic", "fake")
+AGENT_PROVIDERS = ("ollama", "anthropic")  # "fake" is a scripted flow model; the agent has no scripted chat model by env
 DEFAULT_PROVIDER = "ollama"
 DEFAULT_HOST = "http://localhost:11434"
 DEFAULT_MODEL = "qwen2.5:7b-instruct"
@@ -43,6 +44,11 @@ def llm_from_env(env: Mapping[str, str] | None = None) -> LLM:
         from ecosystem_assistant.llm.ollama_llm import OllamaLLM
 
         return OllamaLLM(ollama_settings_from_env(env))
+    if provider == "anthropic":
+        from ecosystem_assistant.llm.anthropic_llm import AnthropicLLM
+        from ecosystem_assistant.llm.ledger import Ledger
+
+        return AnthropicLLM(model=env.get("ANTHROPIC_MODEL") or None, ledger=Ledger.from_env(env))
     if provider == "fake":
         from ecosystem_assistant.llm.scripted import ScriptedLLM
 

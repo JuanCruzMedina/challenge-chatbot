@@ -131,7 +131,7 @@ That service does not exist.
 
 ## Settings
 
-The agent uses the same variables as the informational flow: `OLLAMA_MODEL` (default `qwen2.5:7b-instruct`, which
+The agent uses the same variables as the informational flow (and `LLM_PROVIDER`, below): `OLLAMA_MODEL` (default `qwen2.5:7b-instruct`, which
 supports tool calling), `OLLAMA_HOST` (`http://localhost:11434`) and `OLLAMA_TIMEOUT`. Also:
 
 | Variable | Default | Meaning |
@@ -139,6 +139,33 @@ supports tool calling), `OLLAMA_HOST` (`http://localhost:11434`) and `OLLAMA_TIM
 | `AGENT_DATA_ROOT` | `var/workspace` | The workspace shared by the actions and the knowledge side. |
 | `ACTIONS_LOG_LEVEL` | `WARNING` | Log level of the MCP server process (its INFO logs would pollute the terminal). |
 | `ACTIONS_TOOLS_PACKAGE` | the built-in package | Where the server finds its tools. |
+
+## Using Claude instead of the local model
+
+The default model is local (Ollama). To use Claude through the Anthropic API for **both** the flow and the agent, put
+this in `.env` (git-ignored; `langgraph dev` reads it, and for the terminal chat export it or run with it set):
+
+```
+LLM_PROVIDER=anthropic
+```
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `LLM_PROVIDER` | `ollama` | `ollama` or `anthropic` (`fake` exists for the flow only). |
+| `ANTHROPIC_API_KEY` | unset | A key, if you want one. Empty or unset means the `ant auth login` session is used. |
+| `ANTHROPIC_MODEL` | `claude-haiku-5-5` | Only models with a price in `llm/pricing.py` are accepted. |
+| `ANTHROPIC_MAX_USD` | `1.0` | The cap of the ledger. The call after the cap is refused, before it is sent. |
+| `ANTHROPIC_LEDGER` | `.cost_ledger.json` | Where tokens and estimated cost are recorded (shared by the flow and the agent). |
+
+The cap is an estimate of input and output tokens, not an invoice: set a spending limit in the Anthropic Console too.
+Nothing local has to run: no `ollama serve`. Failures say what to do: a rate limit says to wait, a missing login
+mentions `ant auth login` and `ANTHROPIC_API_KEY`, and the cap names `ANTHROPIC_MAX_USD`.
+
+To check the whole path with real calls (three tiny ones, about a hundredth of a cent), after reading the estimate it prints:
+
+```
+LIVE_LLM=1 uv run python scripts/live_check.py --yes
+```
 
 ## The routing evaluation
 

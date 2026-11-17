@@ -26,7 +26,7 @@ Invariants restated: the agent and the flow still know only their ports; routing
 
 ## Impact
 
-- New `llm/anthropic_llm.py`, `llm/ledger.py`, an agent chat-model builder, edits in `llm/settings.py` and `agent/settings.py`, `scripts/live_check.py`, tests, and D9, `docs/agent.md`, `docs/chat-ui.md`.
+- New `llm/anthropic_llm.py`, `llm/anthropic_chat.py`, `llm/pricing.py`, `llm/ledger.py`, edits in `llm/settings.py` and `agent/settings.py`, `scripts/live_check.py`, tests, and D9, `docs/agent.md`, `docs/chat-ui.md`.
 - New dependency `langchain-anthropic` (pinned with `~=`; it brings the `anthropic` SDK). Dry run before installing.
 - Money: automated tests cost nothing. Real calls are the user's, each batch announced with its estimate.
 

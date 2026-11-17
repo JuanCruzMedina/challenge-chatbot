@@ -58,6 +58,9 @@ assistant> tracking-team owns it, and Bruno Salas leads it [K1].
 assistant> Hello! How can I help?
 ```
 
+**With Claude instead of Ollama:** set `LLM_PROVIDER=anthropic` (see [agent.md](agent.md#using-claude-instead-of-the-local-model)).
+No local model server is needed, and the terminal prints the spending-cap message if the cap is reached.
+
 ## 2. The web UI (LangChain Agent Chat UI)
 
 ```
