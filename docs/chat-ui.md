@@ -68,7 +68,8 @@ uv run langgraph dev --no-browser              # serves the agent on http://loca
 ```
 
 Then open the public Agent Chat UI page in your browser and connect it to `http://localhost:2024` with graph ID
-`agent`. The page is a ready-made frontend; nothing of it is installed or written here. It shows the messages and the
+`agent`. A link that skips the form:
+`https://agentchat.vercel.app/?apiUrl=http://localhost:2024&assistantId=agent`. The page is a ready-made frontend; nothing of it is installed or written here. It shows the messages and the
 tool calls and results. The conversation is sent from your browser to your machine; the model is the local Ollama one.
 
 `langgraph.json` registers one graph, `agent`, built by `ecosystem_assistant.chat.server_graph`. LangGraph calls that
@@ -84,6 +85,21 @@ action posted to its API returned the tool call, the tool result and the reply, 
 streamed run (`threads/.../runs/stream`, what a web client uses) delivered its events, and no process remained after
 stopping. Running it also exposed that blocking file-system calls on the event loop are rejected by the server, which
 is now covered by a test with the same detector.
+
+**Checked in a real browser (Chrome, driven by automation):** the page opened with that link, a message was sent, the
+page posted to `http://localhost:2024/threads/search` (200) and the run reached the server; with the model switched off
+the page received the server's `AgentModelError` as expected. So the hosted page and the local server do work together.
+If the page says "ensure your graph is running at http://localhost:2024", first check the server from a terminal:
+`curl http://localhost:2024/info` must answer. A `langgraph dev` that failed at startup can stay alive waiting for file
+changes while serving nothing, and a second server silently moves to a random port: stop every `langgraph dev`
+(`pkill -f "langgraph dev"`) and start exactly one.
+
+**Found while trying it:** the server answers a browser's normal preflight (`OPTIONS`) with 200 and
+`access-control-allow-origin: *`, so a plain cross-origin request works. But a preflight that carries
+`Access-Control-Request-Private-Network: true` (what some browsers send when a public https page calls `localhost`)
+gets a **400** from `langgraph dev` here (langgraph-api 0.18.2 with Starlette 1.10): Starlette rejects it unless
+`allow_private_network` is on, and langgraph-api drops that key from `langgraph.json` (checked by running its own
+parser), so it cannot be fixed from this project. Which browsers send that header is not something this project controls.
 
 **Not verified: the browser page itself.** That the hosted Agent Chat UI renders this server, and that the browser
 accepts a connection from that page to `localhost` (cross-origin), was not tried. It is the manual step 5.3: connect,
