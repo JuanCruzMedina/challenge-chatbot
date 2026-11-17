@@ -27,7 +27,7 @@ Invariant restated: the UI only forwards messages and prints replies. Informatio
 
 - New `src/ecosystem_assistant/chat/`, a graph factory module, `langgraph.json`, tests under `tests/chat/`, `docs/chat-ui.md`.
 - Dev dependency `langgraph-cli[inmem]`. No cost: the model is the local Ollama one.
-- No change to the agent, the actions server or the knowledge side.
+- One fix found by running the real server: `Agent.open` and the MCP bridge did blocking file-system work on the event loop, which `langgraph dev` rejects; it now runs in a thread (no change of behavior). No other change to the agent, the actions server or the knowledge side.
 
 ## Non-goals
 

@@ -85,6 +85,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 
 - A passive terminal REPL, with no frontend of our own. Afterwards, **LangChain Agent Chat UI** via `langgraph dev` if time allows.
 - The UI only forwards messages and prints replies.
+- Implemented in `ecosystem_assistant.chat` (change `add-chat-ui`): the terminal chat and the agent served as a LangGraph graph for `langgraph dev`; the web UI is the public Agent Chat UI page pointed at `localhost:2024`, with nothing of it installed. See [chat-ui.md](chat-ui.md). The browser side is a manual step and was not verified.
 
 ## D9. LLM and spend policy — accepted (revised 2026-11-16: **Ollama by default**)
 

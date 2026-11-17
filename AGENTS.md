@@ -12,6 +12,7 @@ A multi-source chatbot for the challenge "Multi-Source Chatbot with Intelligent 
 | --- | --- |
 | Design decisions (use case, stack, LLM and spend policy, process) | `docs/design-decisions.md` |
 | Development path: where the project stands, next steps and improvements with their evidence | `docs/roadmap.md` |
+| The agent and the chat interfaces (terminal, `langgraph dev` for Agent Chat UI) | `docs/agent.md`, `docs/chat-ui.md` |
 | Spec-driven workflow: proposals, designs, tasks, TDD order | `openspec/config.yaml` |
 | Current behavior (specs) and in-flight changes | `openspec/specs/`, `openspec/changes/` |
 | Sample data and its consistency check | `data/ecosystem/`, `scripts/validate_data.py` |

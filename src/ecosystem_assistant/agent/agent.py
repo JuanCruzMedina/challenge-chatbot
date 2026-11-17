@@ -5,6 +5,7 @@ for, and returns the reply with a record of the tool calls. Tools are listed aga
 """
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
@@ -60,13 +61,8 @@ class Agent:
         By default everything comes from the environment: the Ollama model, the workspace of ``AGENT_DATA_ROOT``
         (default ``var/workspace``, which both the actions and the knowledge side use) and the project's index.
         """
-        root = Path(workspace or os.environ.get("AGENT_DATA_ROOT") or DEFAULT_DATA_ROOT)
-        if not (root / "company.yaml").is_file():
-            raise FileNotFoundError(
-                f"There is no ecosystem data in {root}. Create the workspace with: "
-                f"uv run python scripts/seed_workspace.py"
-            )
-        service = knowledge or KnowledgeService.from_env()
+        # File-system work runs in a thread: hosts such as `langgraph dev` reject blocking calls on the event loop.
+        root, service = await asyncio.to_thread(_prepare, workspace, knowledge)
         toolbox = McpToolbox.stdio(workspace=root, audit_file=audit_file, tools_package=tools_package,
                                    extra_env=extra_env)
         async with toolbox:
@@ -99,6 +95,17 @@ class Agent:
             tool_calls=records_from_messages(new),
             messages=new,
         )
+
+
+def _prepare(workspace: Path | None, knowledge: KnowledgeService | None) -> tuple[Path, KnowledgeService]:
+    """The workspace folder (checked) and the knowledge service; both touch the disk."""
+    root = Path(workspace or os.environ.get("AGENT_DATA_ROOT") or DEFAULT_DATA_ROOT)
+    if not (root / "company.yaml").is_file():
+        raise FileNotFoundError(
+            f"There is no ecosystem data in {root}. Create the workspace with: "
+            f"uv run python scripts/seed_workspace.py"
+        )
+    return root, knowledge or KnowledgeService.from_env()
 
 
 def _as_messages(messages: str | Sequence[Message]) -> list[BaseMessage]:

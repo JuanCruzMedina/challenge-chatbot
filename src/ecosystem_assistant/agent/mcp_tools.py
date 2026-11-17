@@ -15,6 +15,7 @@ Nothing here names a tool: the tools are whatever the server lists when it is as
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 import tempfile
@@ -78,7 +79,7 @@ class McpToolbox:
             # The subprocess writes its errors to a file of our own: the default is sys.stderr, which hosts such as
             # notebooks or test runners replace with an object that has no file number. The file also lets us say
             # why the server did not start.
-            self._errlog = tempfile.TemporaryFile(mode="w+", encoding="utf-8")
+            self._errlog = await asyncio.to_thread(tempfile.TemporaryFile, mode="w+", encoding="utf-8")
             target = stdio_client(target, errlog=self._errlog)
         self._client = Client(target)
         try:

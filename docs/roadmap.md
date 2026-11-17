@@ -19,8 +19,8 @@ Working rules that apply to everything below: every step is a spec-driven change
 
 | # | Step | Why now |
 | --- | --- | --- |
-| 1 | **Agent** (in progress) | The core criterion: the model alone chooses between the informational and the action route, and MCP tools are discovered at runtime |
-| 2 | **Chat interface** | The brief asks for a passive, ready-made UI: a terminal chat first, then LangChain Agent Chat UI served with `langgraph dev` |
+| 1 | **Agent** (done) | The core criterion: the model alone chooses between the informational and the action route, and MCP tools are discovered at runtime |
+| 2 | **Chat interface** (in progress) | The brief asks for a passive, ready-made UI: a terminal chat first, then LangChain Agent Chat UI served with `langgraph dev` |
 | 3 | **Extensibility demonstration** | Add a new MCP tool (for example `create_documentation_ticket`) by adding one file, and show the agent using it with no change to its code |
 | 4 | **Check against the evaluation criteria** | Walk the six criteria of the brief with evidence from the tests and the measurements |
 | 5 | Optional: expose the solution as an MCP Server for editors such as VS Code or Copilot | Listed as an optional extension in the brief |
