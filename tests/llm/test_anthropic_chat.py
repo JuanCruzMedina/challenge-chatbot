@@ -149,3 +149,42 @@ def test_a_failed_call_records_nothing(ledger: Ledger) -> None:
     with pytest.raises(anthropic.RateLimitError):
         build(Wire(429), ledger).invoke("hi")
     assert ledger.total().calls == 0
+
+
+# --- the event loop must never block ---------------------------------------------------------------------
+
+def blockbuster_run(coro):
+    """Run a coroutine under the detector `langgraph dev` uses: a blocking call raises BlockingError."""
+    import asyncio
+
+    from blockbuster import BlockBuster
+
+    detector = BlockBuster()
+    detector.activate()
+    try:
+        return asyncio.run(coro)
+    finally:
+        detector.deactivate()
+
+
+def test_an_async_call_never_blocks_the_event_loop_with_the_ledger(ledger: Ledger) -> None:
+    """Regression: the guard read the ledger file on the event loop and `langgraph dev` answered
+    "An internal error occurred" to every question. Found by using the real web UI."""
+    wire = Wire(message("ok", input_tokens=10, output_tokens=5))
+    chat = build(wire, ledger)
+
+    reply = blockbuster_run(chat.ainvoke("hola"))
+
+    assert reply.content == "ok"
+    assert ledger.total().calls == 1  # recorded, and without blocking
+
+
+def test_the_cap_is_still_enforced_on_the_async_path_without_blocking(tmp_path: Path) -> None:
+    ledger = Ledger(tmp_path / "l.json", cap_usd=0.0005)
+    ledger.record(MODEL, 0, 1_000)
+    wire = Wire(message("never"))
+
+    with pytest.raises(BudgetExceededError):  # not a BlockingError
+        blockbuster_run(build(wire, ledger).ainvoke("hola"))
+    assert wire.requests == []
+

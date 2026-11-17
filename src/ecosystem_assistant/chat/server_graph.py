@@ -11,6 +11,7 @@ Confirmed with a throwaway probe against langgraph-cli 0.4.43 / langgraph-api 0.
 """
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -30,7 +31,12 @@ async def open_graph(chat: BaseChatModel | None = None, **agent_options: Any) ->
     The options are those of ``Agent.open`` (workspace, audit file, knowledge service, tools package, extra
     environment). The graph is the agent's own: same builder, same prompt, same two nodes. Nothing is added.
     """
-    model = chat or chat_model_from_env()
+    # LangGraph runs this factory on its event loop and rejects blocking calls there: a model that reads files while
+    # it is built or first used (the Anthropic one reads the login credentials) is prepared in a worker thread.
+    model = chat or await asyncio.to_thread(chat_model_from_env)
+    prime = getattr(model, "prime", None)
+    if prime is not None:
+        await asyncio.to_thread(prime)
     async with Agent.open(chat=model, **agent_options) as agent:
         yield build_agent_graph(model, agent.tools, SYSTEM_PROMPT, translate_error=translate_model_error())
 

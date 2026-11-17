@@ -32,12 +32,27 @@ class SessionChatAnthropic(ChatAnthropic):
             params.pop("api_key", None)  # an empty key would make the SDK send ``Bearer `` and fail
         return params
 
+    def prime(self) -> None:
+        """Do now, from a worker thread, the file reads this model would otherwise do on the event loop.
+
+        `langgraph dev` rejects blocking calls on its event loop. The SDK's HTTP stack imports ``truststore`` (which
+        reads a system file) when it first connects, and building a client resolves the ``ant auth login``
+        credentials from disk; ``ChatAnthropic`` builds its clients lazily, inside the first call. Found with the real
+        web UI: every question answered "An internal error occurred".
+        """
+        try:
+            import truststore  # noqa: F401  (imported by the first connection)
+        except ImportError:  # the SDK's HTTP stack changed; the regression test will say whether it still blocks
+            pass
+        _ = self._client, self._async_client
+
 
 class LedgerCallback(BaseCallbackHandler):
     """Refuses a call once the cap is reached, and records the usage of every call that finishes."""
 
     raise_error = True   # a refusal must stop the call, not be logged and ignored
-    run_inline = True
+    # Not ``run_inline``: the ledger reads and writes a file, and on an async call LangChain runs a non-inline handler
+    # in a worker thread (and waits for it). Inline, it blocked the event loop and `langgraph dev` rejected the call.
 
     def __init__(self, ledger: Ledger, model: str) -> None:
         self.ledger = ledger

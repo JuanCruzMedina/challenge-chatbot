@@ -155,3 +155,64 @@ def test_the_graph_entry_is_accepted_by_langgraphs_own_factory_check() -> None:
     module = importlib.import_module(module_path.removeprefix("./src/").removesuffix(".py").replace("/", "."))
 
     classify_factory(getattr(module, attribute), "agent-regression-check")  # raises ValueError when the server would refuse it
+
+
+def test_the_real_anthropic_path_of_the_factory_never_blocks_the_event_loop_in_a_fresh_process() -> None:
+    """Regression, found with the real web UI: the SDK reads the login credentials and imports its HTTP stack while a
+    client is first built, and `langgraph dev` rejects blocking calls on its event loop, so every question answered
+    "An internal error occurred". This runs the factory's real path (model from the environment, real client,
+    unroutable address) under the server's own detector. It needs a fresh interpreter: imports are cached.
+    """
+    import os
+    import subprocess
+    import sys
+    import textwrap
+
+    from tests.data.helpers import SAMPLE
+
+    script = textwrap.dedent(f"""
+        import asyncio, shutil, tempfile
+        from pathlib import Path
+        from blockbuster import BlockBuster
+        from langchain_core.messages import HumanMessage
+        from ecosystem_assistant.agent.knowledge import KnowledgeService
+        from ecosystem_assistant.chat.server_graph import open_graph
+        from ecosystem_assistant.knowledge.retrieval.embedders import HashingEmbedder
+        from ecosystem_assistant.knowledge.retrieval.index import RetrievalIndex
+        from ecosystem_assistant.llm.scripted import ScriptedLLM
+
+        work = Path(tempfile.mkdtemp())
+        shutil.copytree({str(SAMPLE)!r}, work / "ws")
+        knowledge = KnowledgeService(work / "ws", RetrievalIndex(work / "index", HashingEmbedder()), ScriptedLLM([]),
+                                     min_score=0.0)
+
+        async def go():
+            try:
+                async with open_graph(workspace=work / "ws", audit_file=work / "audit.jsonl",
+                                      knowledge=knowledge) as graph:
+                    await graph.ainvoke({{"messages": [HumanMessage("hola")]}})
+            except BaseException as error:
+                chain, current = [], error
+                while current is not None and len(chain) < 20:   # exception chains can loop back on themselves
+                    chain.append(type(current).__name__)
+                    current = current.__cause__ or current.__context__
+                return ",".join(chain)   # printing here would itself be a blocking call on the loop
+            return "no error"
+
+        detector = BlockBuster()
+        detector.activate()
+        try:
+            outcome = asyncio.run(go())
+        finally:
+            detector.deactivate()
+        print("CHAIN:", outcome)
+    """)
+    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+    env["LLM_PROVIDER"] = "anthropic"   # the conftest removes it for the suite; this child process is the real thing
+
+    result = subprocess.run([sys.executable, "-I", "-c", script], env=env, capture_output=True, text=True, timeout=90,
+                            cwd=ROOT)
+
+    output = result.stdout + result.stderr
+    assert "BlockingError" not in output, output
+    assert "CHAIN:" in result.stdout and "AgentModelError" in result.stdout, output  # it reached the (unroutable) API
