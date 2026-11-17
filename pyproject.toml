@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Multi-source documentation chatbot for a microservices ecosystem (challenge project)."
 requires-python = ">=3.12"
 dependencies = [
+    "chromadb~=1.5",
     "mcp~=2.3",
     "networkx~=3.7",
     "pyyaml~=6.0",

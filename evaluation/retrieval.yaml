@@ -1,0 +1,96 @@
+# Retrieval evaluation set.
+#
+# Each question is written the way a person would ask it, from the content of the invented sample
+# documents (not from their titles). `expected` lists the documents (paths relative to data/ecosystem)
+# that answer it: a question is a hit when any of them is among the top documents returned.
+# About eighteen questions is an indicator of quality, not a statistic.
+questions:
+  - id: q01
+    question: "A customer sees a price different from the one the commercial team loaded. What should we do?"
+    expected: ["repos/catalog-service/docs/runbook-stale-prices.md"]
+
+  - id: q02
+    question: "How long can the external card provider take before a charge is marked as failed?"
+    expected: ["repos/payments-service/docs/api-v1.md"]
+
+  - id: q03
+    question: "Why do orders learn about the result of a charge through events instead of waiting for the answer?"
+    expected: ["repos/orders-service/docs/adr-001-event-driven-orders.md"]
+
+  - id: q04
+    question: "An order has been waiting for its payment for more than fifteen minutes. How do I unstick it?"
+    expected: ["repos/orders-service/docs/runbook-stuck-order.md"]
+
+  - id: q05
+    question: "Customers receive the confirmation email very late. What should I check?"
+    expected: ["repos/notifications-service/docs/runbook-delayed-emails.md"]
+
+  - id: q06
+    question: "How many requests per minute can a consumer make when reading vehicle positions?"
+    expected: ["repos/tracking-service/docs/api.md"]
+
+  - id: q07
+    question: "When does the routing service decide to plan a route again for a vehicle?"
+    expected: ["repos/routing-service/docs/routing-rules.md"]
+
+  - id: q08
+    question: "How quickly must the driver application show a route after it has been assigned?"
+    expected: ["repos/driver-service/docs/route-delivery.md"]
+
+  - id: q09
+    question: "What is the main priority of the grocery client for this quarter?"
+    expected: ["clients/demo-grocery/product/vision.md"]
+
+  - id: q10
+    question: "Which client needs a vehicle position on screen that is never older than half a minute?"
+    expected: ["clients/demo-logistics/product/vision.md", "repos/tracking-service/docs/api.md"]
+
+  - id: q11
+    question: "Which clients does the studio work for and which applications does each one have?"
+    expected: ["company/overview.md"]
+
+  - id: q12
+    question: "A vehicle has not sent a position for several minutes. Who do we escalate to?"
+    expected: ["repos/tracking-service/docs/runbook-missing-positions.md"]
+
+  - id: q13
+    question: "Which states can an order go through?"
+    expected: ["repos/orders-service/README.md"]
+
+  - id: q14
+    question: "What is the limit of requests per minute for reading products and prices?"
+    expected: ["repos/catalog-service/docs/api.md"]
+
+  - id: q15
+    question: "Is there anyone on call around the clock for problems with card charges?"
+    expected: ["repos/payments-service/docs/runbook-failed-payments.md"]
+
+  - id: q16
+    question: "Can I cancel an order that has already been paid?"
+    expected: ["repos/orders-service/docs/api.md"]
+
+  - id: q17
+    question: "Which events does the service that sends messages to customers listen to?"
+    expected: ["repos/notifications-service/README.md"]
+
+  - id: q18
+    question: "What does the system do with positions older than thirty seconds?"
+    expected: ["repos/tracking-service/docs/api.md", "repos/routing-service/docs/routing-rules.md"]
+
+  # Paraphrases: they avoid the words the documents use, so a purely lexical method struggles with them
+  # and a semantic model should not. They are what tells the embedders apart.
+  - id: q19
+    question: "Dispatchers complain they cannot tell where a delivery truck is. Where do I start looking?"
+    expected: ["repos/tracking-service/docs/runbook-missing-positions.md"]
+
+  - id: q20
+    question: "How do we make sure a shopper is never billed twice for one purchase?"
+    expected: ["repos/payments-service/docs/api-v1.md", "repos/orders-service/docs/api.md"]
+
+  - id: q21
+    question: "What happens when the company that handles the money is slow to answer?"
+    expected: ["repos/payments-service/docs/runbook-failed-payments.md", "repos/payments-service/docs/api-v1.md"]
+
+  - id: q22
+    question: "According to the strategy, what matters most for the people who deliver the goods?"
+    expected: ["clients/demo-logistics/product/vision.md"]

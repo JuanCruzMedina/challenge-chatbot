@@ -43,7 +43,7 @@ User ──► Agent ──► tool "query_knowledge" ────────�
 
 - **Why:** persists to disk, needs no server, and keeps per-chunk metadata (required for incremental ingestion).
 - **Alternatives:** FAISS (metadata and deletes are awkward), LanceDB (comparable), Qdrant or pgvector (better in production, need a server).
-- **Embeddings:** a local model (`sentence-transformers`). Nothing leaves the machine and it costs nothing.
+- **Embeddings:** a local model. Nothing leaves the machine and it costs nothing. *Revised 2026-11-17:* `all-MiniLM-L6-v2` on Chroma's ONNX runtime instead of `sentence-transformers`, which pulls in PyTorch (hundreds of MB). The model is downloaded once (about 80 MB) and only with an explicit opt-in; an offline word-hashing embedder is kept for tests. Implemented in `ecosystem_assistant.knowledge.retrieval` (change `add-retrieval-index`); see `docs/retrieval-index.md`.
 
 ## D5. Knowledge Graph: NetworkX — accepted · Kùzu in the future
 
