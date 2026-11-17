@@ -141,4 +141,6 @@ Modeled on the way of working in `recruiting-metrics`, in a **lightweight** vers
 | Real data in the future | Local or client-approved embeddings and LLM, per `responsible-ai-usage` |
 | NetworkX falls short | An isolated query interface (D5) and migration to Kùzu |
 
+**Development path and improvements:** see `docs/roadmap.md`.
+
 **To confirm:** the interpretation of D2 with the lead, and whether the optional API gets enabled (and with which cap).
