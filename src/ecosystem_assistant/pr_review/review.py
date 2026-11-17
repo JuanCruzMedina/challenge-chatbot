@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import difflib
+import json
 import shutil
 import tempfile
 from collections.abc import Callable
@@ -22,6 +23,20 @@ MAX_TOTAL_PATCH_CHARS = 12000
 AgentOpener = Callable[[Path, Path | None, Path | None], AbstractAsyncContextManager[Any]]
 
 
+def call_status(record: ToolCallRecord) -> str:
+    """``failed`` for a tool error, ``conflict`` when the result says nothing was written, ``ok`` otherwise.
+
+    It reads the result's own ``outcome`` field; it knows no tool by name.
+    """
+    if record.error:
+        return "failed"
+    try:
+        payload = json.loads(record.result)
+    except ValueError:
+        return "ok"
+    return "conflict" if isinstance(payload, dict) and payload.get("outcome") == "conflict" else "ok"
+
+
 @dataclass
 class ReviewReport:
     pr_id: str
@@ -31,16 +46,24 @@ class ReviewReport:
     explanation: str = ""                            # the model's own words
     dry_run: bool = False
 
+    @property
+    def wrote_nothing(self) -> int:
+        """How many tool calls did not write anything (failed or conflict)."""
+        return len([c for c in self.tool_calls if call_status(c) != "ok"])
+
     def to_dict(self) -> dict[str, Any]:
         return {"pr_id": self.pr_id, "decision": self.decision, "dry_run": self.dry_run,
-                "tool_calls": [c.to_dict() for c in self.tool_calls], "diffs": dict(self.diffs),
-                "explanation": self.explanation}
+                "tool_calls": [{**c.to_dict(), "status": call_status(c)} for c in self.tool_calls],
+                "diffs": dict(self.diffs), "explanation": self.explanation}
 
     def render(self) -> str:
         head = f"{self.pr_id}: " + ("documentation changed" if self.decision == "changed" else "no documentation change")
         lines = [head + (" (dry run: nothing was written for real)" if self.dry_run else "")]
         for call in self.tool_calls:
-            lines.append(f"  - {call.name}{' (failed)' if call.error else ''}")
+            status = call_status(call)
+            lines.append(f"  - {call.name}" + ("" if status == "ok" else f" ({status})"))
+        if self.wrote_nothing:
+            lines.append(f"  {self.wrote_nothing} {'call' if self.wrote_nothing == 1 else 'calls'} wrote nothing")
         for diff in self.diffs.values():
             lines += ["", diff.rstrip()]
         lines += ["", f"Model's explanation: {self.explanation or '(none)'}"]

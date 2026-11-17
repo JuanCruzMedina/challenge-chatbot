@@ -44,7 +44,7 @@ The title and the description carry the business view, so the patches can be lef
 Built by code from what happened, not from what the model says it did:
 
 - **Decision**: `changed` when at least one markdown file differs after the run, `no_change` otherwise.
-- **Tool calls**: every call except the knowledge tool, with arguments and result.
+- **Tool calls**: every call except the knowledge tool, with arguments, result and a status: `ok`, `conflict` (the tool said the text to replace was not found or not unique, so nothing was written) or `failed` (the tool reported an error). The text report shows the status and counts the calls that wrote nothing, so the model's explanation can be compared with the diffs: a model may say it changed something that a conflict stopped.
 - **Diffs**: a unified diff for every markdown file that changed or was created.
 - **Explanation**: the model's last message, shown as its own words.
 

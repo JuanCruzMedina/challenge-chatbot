@@ -135,3 +135,32 @@ def test_a_dry_run_reports_the_change_and_leaves_no_trace(workspace_dir: Path, t
     assert "repos/payments-service/docs/partial-refunds.md" in report.diffs
     assert digest(workspace_dir) == before and not audit.exists()
     assert server_processes() == servers
+
+
+def test_a_conflict_is_marked_and_nothing_is_claimed_as_written(workspace_dir: Path, tmp_path: Path) -> None:
+    chat = ScriptedChat(script=[
+        ai_tool("update_document", {"service": "payments-service", "doc_path": "docs/api-v1.md",
+                                    "old_text": "text that is not in the document", "new_text": "x"}),
+        ai_text("I tried to update the rule."),
+    ])
+
+    report = run(review_pull_request(FEATURE_PR, workspace_dir, opener(chat, tmp_path)))
+
+    assert [c["status"] for c in report.to_dict()["tool_calls"]] == ["conflict"]
+    assert report.decision == "no_change" and report.diffs == {}
+    rendered = report.render()
+    assert "update_document (conflict)" in rendered and "1 call wrote nothing" in rendered
+
+
+def test_a_successful_call_is_ok_and_a_failing_call_is_failed(workspace_dir: Path, tmp_path: Path) -> None:
+    chat = ScriptedChat(script=[
+        ai_tool("add_document", {"service": "payments-service", "doc_path": "docs/partial-refunds.md",
+                                 "content": "# Partial refunds\n\nText.\n"}, "a"),
+        ai_tool("add_document", {"service": "ghost-service", "doc_path": "docs/x.md", "content": "x"}, "b"),
+        ai_text("One worked, one did not."),
+    ])
+
+    report = run(review_pull_request(FEATURE_PR, workspace_dir, opener(chat, tmp_path)))
+
+    assert [c["status"] for c in report.to_dict()["tool_calls"]] == ["ok", "failed"]
+    assert "1 call wrote nothing" in report.render()
