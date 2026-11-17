@@ -10,6 +10,7 @@ Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is arc
 | --- | --- | --- | --- |
 | `add_document` | create a new markdown document | **`service`**, **`doc_path`**, **`content`** | `outcome: created` |
 | `append_to_document` | add text at the end of a document, or create it (nothing to quote) | **`service`**, **`doc_path`**, **`text`** | `outcome: appended` or `created` |
+| `create_documentation_ticket` | open a ticket asking for documentation to be written or fixed | **`service`**, **`title`**, **`description`**, `priority` (`low`, `normal`, `high`) | `outcome: created`, `ticket_id` (`DOC-0001`), `path` |
 | `update_document` | replace one passage in an existing document | **`service`**, **`doc_path`**, **`old_text`**, **`new_text`** | `outcome: updated` or `outcome: conflict` |
 | `mark_document_obsolete` | flag a document as outdated | **`service`**, **`doc_path`**, **`reason`**, `replaced_by` | `outcome: marked_obsolete` or `already_obsolete` |
 
@@ -19,6 +20,8 @@ Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is arc
 - Invalid input is an **error result** (`is_error`) whose message names the argument. A **conflict** is a normal result: nothing is written and the caller decides what to do.
 
 `append_to_document` is the simple way to record a new fact: it never needs the old text and never conflicts with it. The line ending style of the file is kept and a blank line separates the new text from the old. Two appends at the very same moment could overwrite each other (single-user workspace; no locking).
+
+A ticket is a markdown file `tickets/DOC-NNNN.md` at the workspace root, with front matter (`id`, `service`, `title`, `priority`, `status: open`, `created`) and the description as body. It lives outside `repos/` on purpose: it is an action record, not documentation, so the informational flow does not index it. The number is reserved with an atomic link, so simultaneous calls get different numbers. It is one extra file (`actions/tools/tickets.py`); nothing else in the server or in the agent knows about it.
 
 ### Conflicts
 

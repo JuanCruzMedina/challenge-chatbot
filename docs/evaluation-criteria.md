@@ -8,7 +8,7 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 | 2 | Action requests always run through an MCP Server | Met | Tests + structure |
 | 3 | The agent chooses autonomously between the two routes | Met | Loop tests (scripted) + 16/16 with Claude (small set) |
 | 4 | No manual conditional logic (if/else, keywords) | Met for routing | Static tests |
-| 5 | Modular and extensible: tools added without touching routing | Met | Tests + a real tool addition |
+| 5 | Modular and extensible: tools added without touching routing | Met | Tests + a tool added as one new file |
 | 6 | The MCP Server handles all actions with correct MCP schemas | Met | Tests |
 
 ## 1. Informational queries: one centralized RAG + KG flow
@@ -41,7 +41,8 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 
 - At the start of every turn the agent lists the server's tools again and rebuilds its loop. A tool is a module in `actions/tools/` with a `register` function; the server registers every module it finds.
 - Evidence: `tests/actions/test_extensibility.py` (a new module appears and the defaults are unchanged), `tests/agent/test_mcp_toolbox.py::test_a_tool_added_to_the_servers_package_is_available_with_its_own_schema` and `tests/agent/test_agent.py::test_the_tools_are_listed_again_at_the_start_of_every_turn` (a tool added between two turns shows up in the second).
-- Real addition: `append_to_document` was added in commit `4dbd149`. Careful reading of that commit: the *tool* is one function in `actions/tools/documents.py`, but the same commit also edited the agent's system prompt (to teach confirmation and conflict rules, unrelated to the tool). So it is a **real** extension but not a clean demonstration; the clean one is described below.
+- **Clean demonstration (`add-ticket-tool`).** The tool `create_documentation_ticket` was added as one new file, `actions/tools/tickets.py`. In the implementation, `git status` under `src/` shows that new file and nothing else: nothing in `agent/`, `chat/`, `knowledge/` or `llm/` changed, and the prompt was not touched. Evidence: `tests/agent/test_prompt_rules.py::test_the_agent_runs_the_ticket_tool_added_to_the_server_without_any_change` (real server over stdio, the agent discovers and runs the tool), `tests/actions/test_tickets.py` (behavior and schema) and the "no tool name in the agent source" test, still green with the new tool in the list. The only other edits are tests and docs that enumerate the server's tools.
+- Earlier, `append_to_document` (commit `4dbd149`) was also a real addition, but that commit also edited the agent's prompt for unrelated reasons, so it is not the clean example.
 
 ## 6. The MCP Server handles all actions with correct schemas
 
@@ -56,4 +57,4 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 ## Status and what is still open
 
 - Real-model routing: `scripts/eval_agent.py` with `claude-haiku-5-5`, run on 2026-11-17: **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about $0.016 by the ledger's estimate. The mixed turns called `query_knowledge` first and then the write tool; chat and unsupported turns called no tool. The log is the output of `LLM_PROVIDER=anthropic uv run python scripts/eval_agent.py --min-rate 0.7`. It is a small set (16 turns, written by the project), one run and one model, so it supports "the model routes correctly on these cases", not a general rate.
-- Clean extensibility demonstration (a new tool in its own new file, with a commit that touches nothing in `agent/`, `chat/` or `knowledge/`): in progress as `add-ticket-tool`.
+- Nothing else is open for the six criteria. Optional extension of the brief (expose the solution as an MCP server for editors): not done.

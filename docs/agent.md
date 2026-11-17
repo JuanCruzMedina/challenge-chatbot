@@ -9,7 +9,7 @@ decision belongs to the model, which reads the tool descriptions.
 | Tool | Where it comes from | What it is for |
 |---|---|---|
 | `query_knowledge` | `agent/knowledge.py` | Every informational question. It wraps the whole flow of [informational-flow.md](informational-flow.md) (graph + documents, cited answer). It is the **only** way the agent reads knowledge. |
-| every tool the MCP server lists | discovered at runtime by `agent/mcp_tools.py` | Actions: today `add_document`, `append_to_document`, `update_document`, `mark_document_obsolete`. |
+| every tool the MCP server lists | discovered at runtime by `agent/mcp_tools.py` | Actions: today `add_document`, `append_to_document`, `create_documentation_ticket`, `update_document`, `mark_document_obsolete`. |
 
 The agent source names no MCP tool. A test reads the real server's tool list and fails if any name appears in
 `src/ecosystem_assistant/agent/`.
@@ -104,7 +104,7 @@ print((work / "workspace/repos/tracking-service/docs/lead.md").read_text().split
 ```
 
 ```text
-['query_knowledge', 'add_document', 'append_to_document', 'update_document', 'mark_document_obsolete']
+['query_knowledge', 'add_document', 'append_to_document', 'update_document', 'mark_document_obsolete', 'create_documentation_ticket']
 ['query_knowledge'] | tracking-team owns it, and Bruno Salas leads it [K1].
 ['add_document'] | I created docs/lead.md.
 [] | Hello! How can I help?
