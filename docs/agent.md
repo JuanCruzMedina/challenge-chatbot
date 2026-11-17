@@ -161,11 +161,16 @@ The cap is an estimate of input and output tokens, not an invoice: set a spendin
 Nothing local has to run: no `ollama serve`. Failures say what to do: a rate limit says to wait, a missing login
 mentions `ant auth login` and `ANTHROPIC_API_KEY`, and the cap names `ANTHROPIC_MAX_USD`.
 
-To check the whole path with real calls (three tiny ones, about a hundredth of a cent), after reading the estimate it prints:
+To check the whole path with real calls (three tiny ones, estimated at $0.00015; the script prints its estimate first):
 
 ```
 LIVE_LLM=1 uv run python scripts/live_check.py --yes
 ```
+
+**Status: not run yet.** Everything above is tested with fake clients and fake transports; the probe of task 1.2 made three
+real calls (JSON with a schema, a plain reply, an effort setting through the chat model) and the login session worked.
+The full `live_check` and the routing evaluation with a real model have not been run, so no claim is made yet about how
+well Claude routes in this project.
 
 ## The routing evaluation
 

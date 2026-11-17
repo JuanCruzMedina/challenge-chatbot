@@ -31,7 +31,7 @@
 
 - [x] 6.1 Write failing tests for `scripts/live_check.py` with fake clients: without `LIVE_LLM=1` or without `--yes` it makes no call and says what to set; with both it prints the estimate first, makes its calls, then prints tokens used and the ledger total.
 - [x] 6.2 Implement it and make 6.1 pass.
-- [ ] 6.3 (PENDING THE USER'S GO) (Needs the user's explicit go; the estimate is announced first.) Run `LIVE_LLM=1 uv run python scripts/live_check.py --yes` once and record what it measured. If it is not run, mark it skipped and say so in the documentation.
+- [ ] 6.3 (SKIPPED: the real call was not run in this session; the user can run it) (Needs the user's explicit go; the estimate is announced first.) Run `LIVE_LLM=1 uv run python scripts/live_check.py --yes` once and record what it measured. If it is not run, mark it skipped and say so in the documentation.
 
 ## 7. Documentation and integration
 
