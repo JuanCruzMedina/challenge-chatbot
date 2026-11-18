@@ -35,6 +35,7 @@ The model returns one JSON object. Only methods of this fixed catalog are accept
 | `obsolete_documents` | none | documents marked obsolete |
 | `list_entities` | `type` | every entity of a type (team, person, service, ...) |
 | `team_overview` | `team` | the services a team owns and the person who leads each |
+| `documents_about` | `entity` | the documents that are about a service, API or event, and the documents of a service |
 | `teams_overview` | none | every team with its services and leads (all teams at once) |
 
 Unknown methods, missing or extra arguments, filters that name an unknown client, application or service, and queries beyond the fourth are **dropped and recorded** in the trace. Entity names go through the graph's tolerant matching ("payments api" finds `payments-api`). Invalid JSON is retried once; if it fails again the flow continues with a document search alone.

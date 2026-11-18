@@ -76,6 +76,7 @@ class _Builder:
         company = self._load(self.root / "company.yaml")
         feature_ids = self._build_company_and_products(company, "company.yaml")
         self._build_services(feature_ids)
+        self._build_document_links()
         return KnowledgeGraph(self.g)
 
     def _build_company_and_products(self, company: dict, src: str) -> set[str]:
@@ -135,6 +136,49 @@ class _Builder:
         title = next((line[2:].strip() for line in body.splitlines() if line.startswith("# ")), path.name)
         rel = self._rel(path)
         return self._node(m.DOCUMENT, doc_id, doc_id, rel, title=title, status=status, path=rel, **extra)
+
+    def _build_document_links(self) -> None:
+        """Read ``about`` from the front matter of every markdown document of a service, listed in a manifest or not.
+
+        A name that matches no service, API or event is kept in ``unresolved_links`` and never fails the build.
+        """
+        unresolved: list[dict[str, str]] = []
+        for service_dir in sorted(p for p in (self.root / "repos").glob("*") if p.is_dir()):
+            service_key = m.key(m.SERVICE, service_dir.name)
+            for path in sorted(service_dir.rglob("*.md")):
+                relative = path.relative_to(service_dir)
+                if any(part.startswith(".") for part in relative.parts):
+                    continue
+                doc_id = f"{service_dir.name}/{relative.as_posix()}"
+                names, problem = self._about(path)
+                if problem:
+                    unresolved.append({"document": doc_id, "name": problem})
+                if not names or service_key not in self.g:
+                    continue
+                source = self._rel(path)
+                doc_key = self._document(doc_id, path, source)
+                self._edge(service_key, doc_key, m.DOCUMENTED_BY, source)
+                for name in names:
+                    target = next((k for k in (m.key(t, name) for t in (m.SERVICE, m.API, m.EVENT)) if k in self.g), None)
+                    if target is None:
+                        unresolved.append({"document": doc_id, "name": name})
+                    else:
+                        self._edge(doc_key, target, m.ABOUT, source)
+        self.g.graph["unresolved_links"] = unresolved
+
+    @staticmethod
+    def _about(path: Path) -> tuple[list[str], str]:
+        """The names in the ``about`` field of a document, and a problem text when its front matter cannot be read."""
+        front = _FRONT_MATTER.match(path.read_bytes().decode("utf-8", errors="replace"))
+        if not front:
+            return [], ""
+        try:
+            meta = yaml.safe_load(front.group(1)) or {}
+        except yaml.YAMLError:
+            return [], "<front matter could not be read>"
+        about = meta.get("about") if isinstance(meta, dict) else None
+        items = [about] if isinstance(about, str) else about if isinstance(about, list) else []
+        return sorted({str(item).strip() for item in items if str(item).strip()}), ""
 
     def _build_services(self, feature_ids: set[str]) -> None:
         provided: set[str] = set()

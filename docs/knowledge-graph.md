@@ -33,6 +33,7 @@ Every entity and relation lists the files it came from (`sources`), and every an
 | `obsolete_documents()` | documents marked obsolete, with service and path |
 | `list_entities(type)` | every entity of a type, sorted by name; an unknown type lists the valid ones |
 | `team_overview(team)` | the services a team owns, each with its lead |
+| `documents_about(entity)` | the documents that say they are about a service, API or event (`via: about`), and for a service the documents its manifest lists (`via: documented_by`), each with service, path, title and status |
 | `teams_overview()` | every team with its services and leads, as plain names, in one answer (so "all teams and their leads" fits one query) |
 
 Names can be loose: any letter case, spaces, hyphens or underscores. When a name matches several entities, `find_entities` shows them all; the other methods take the best match of the type they need.
@@ -139,3 +140,16 @@ print(graph.obsolete_documents().documents)
 - The graph is an index of declared facts. It does not read the prose of documents beyond the first heading and the front matter; searching document text is the job of the retrieval (RAG).
 - Entity lookup is normalization and ranking, not understanding: it finds `Payments API`, not a paraphrase of it.
 - When the graph outgrows memory or needs several writers, `design-decisions.md` D5 names the next step (Kùzu).
+
+## Documents that say what they are about
+
+A markdown document under `repos/<service>/` may start with front matter that declares what it is about:
+
+```
+---
+about: [payments-service, payments-api]
+---
+# Note on refunds
+```
+
+The graph reads this for every document of a service, listed in a manifest or not. The document is linked to its service (`DOCUMENTED_BY`) and to each service, API or event it names with the relation `ABOUT`; `describe` shows it and `documents_about` lists the documents of an entity. A name that matches nothing does not fail the build: `graph.unresolved_links` lists the document and the name so it can be corrected. Only services, APIs and events can be named for now (not features, teams or other documents). The chat does not write this field yet; it is the next change.

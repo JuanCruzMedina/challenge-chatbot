@@ -24,10 +24,11 @@ IMPLEMENTS = "IMPLEMENTS"              # service -> feature
 PART_OF = "PART_OF"                    # feature -> epic
 BELONGS_TO = "BELONGS_TO"              # epic -> client
 HAS_VISION = "HAS_VISION"              # client -> document
+ABOUT = "ABOUT"                        # document -> service, api or event (the document says it is about it)
 
 RELATIONS = (
     HAS_CLIENT, HAS_APPLICATION, HAS_SERVICE, OWNED_BY, LED_BY, PROVIDES, CONSUMES,
-    PUBLISHES, SUBSCRIBES_TO, DOCUMENTED_BY, IMPLEMENTS, PART_OF, BELONGS_TO, HAS_VISION,
+    PUBLISHES, SUBSCRIBES_TO, DOCUMENTED_BY, IMPLEMENTS, PART_OF, BELONGS_TO, HAS_VISION, ABOUT,
 )
 
 # Relations ignored when looking for a connection between two entities: belonging to the same

@@ -29,13 +29,14 @@ def test_the_catalog_has_the_graph_questions_and_nothing_else() -> None:
     assert set(CATALOG) == {
         "client_overview", "application_services", "service_owner", "api_consumers", "event_flow",
         "service_product_context", "relation_path", "describe", "obsolete_documents",
-        "list_entities", "team_overview", "teams_overview",
+        "list_entities", "team_overview", "teams_overview", "documents_about",
     }
     assert CATALOG["list_entities"].required == ("type",)
     assert CATALOG["team_overview"].required == ("team",)
     assert CATALOG["relation_path"].required == ("start", "end")
     assert CATALOG["obsolete_documents"].required == ()
     assert CATALOG["teams_overview"].required == ()
+    assert CATALOG["documents_about"].required == ("entity",)
     assert MAX_QUERIES == 4
 
 

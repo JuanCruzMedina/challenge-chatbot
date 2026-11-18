@@ -20,6 +20,7 @@ CASES: dict[str, dict[str, str]] = {
     "list_entities": {"type": "documents"},
     "team_overview": {"team": "orders-team"},
     "teams_overview": {},
+    "documents_about": {"entity": "payments-service"},
 }
 
 

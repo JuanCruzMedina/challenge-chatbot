@@ -213,6 +213,24 @@ class ObsoleteDocuments(_Plain):
 
 
 @dataclass
+class DocumentLink(_Plain):
+    document: EntityRef
+    service: str | None
+    path: str
+    title: str
+    status: str
+    via: str                 # "about": the document says so; "documented_by": the manifest of the service lists it
+
+
+@dataclass
+class DocumentsAbout(_Plain):
+    entity: EntityRef
+    documents: list[DocumentLink]
+    sources: list[str]
+    found: bool = True
+
+
+@dataclass
 class EntityList(_Plain):
     type: str
     entities: list[EntityRef]
@@ -255,6 +273,11 @@ class KnowledgeGraph:
 
     def __init__(self, graph: nx.MultiDiGraph) -> None:
         self._g = graph
+
+    @property
+    def unresolved_links(self) -> list[dict[str, str]]:
+        """The names a document said it is about that match no service, API or event: ``{document, name}``."""
+        return [dict(item) for item in self._g.graph.get("unresolved_links", [])]
 
     # --- plain-data inspection ------------------------------------------------------------
 
@@ -595,6 +618,31 @@ class KnowledgeGraph:
             self._ref(key), dict(self._g.nodes[key]["attributes"]), relations,
             self._sources({key, *related}, edges),
         )
+
+    def documents_about(self, entity: str) -> DocumentsAbout | NotFound:
+        """The documents that say they are about a service, API or event, and the manifest documents of a service."""
+        key = self._resolve(entity)
+        if isinstance(key, NotFound):
+            return key
+        kind = self._g.nodes[key]["type"]
+        if kind not in (m.SERVICE, m.API, m.EVENT):
+            return self._not_found(entity, None)
+        linked = {k: "about" for k in self._origins(key, m.ABOUT)}
+        if kind == m.SERVICE:
+            for k in self._targets(key, m.DOCUMENTED_BY):
+                linked.setdefault(k, "documented_by")
+        documents: list[DocumentLink] = []
+        for doc_key, via in sorted(linked.items()):
+            attrs = self._g.nodes[doc_key]["attributes"]
+            owner = self._first(self._origins(doc_key, m.DOCUMENTED_BY))
+            service = self._g.nodes[owner]["name"] if owner else None
+            doc_id = m.split_key(doc_key)[1]
+            path = doc_id[len(service) + 1:] if service else doc_id
+            documents.append(DocumentLink(self._ref(doc_key), service, path, attrs.get("title", path),
+                                          attrs.get("status", "current"), via))
+        documents.sort(key=lambda d: (d.via != "about", d.service or "", d.path))
+        nodes = {key, *linked}
+        return DocumentsAbout(self._ref(key), documents, self._sources(nodes))
 
     def obsolete_documents(self) -> ObsoleteDocuments:
         documents: list[ObsoleteDoc] = []
