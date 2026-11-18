@@ -3,7 +3,7 @@
 Challenge: *Multi-Source Chatbot with Intelligent Agent Orchestration*.
 Status: **draft v1** (2026-11-16). Each decision carries its status: `accepted`, `proposed` or `future`.
 
-> Cross-cutting rule: all data in this repo is **invented**. No real CraftLabs, client or personal information. See `responsible-ai-usage` in the vault.
+> Cross-cutting rule: all data in this repo is **invented**. No real company, client or personal information.
 
 ---
 
@@ -148,7 +148,7 @@ Modeled on the way of working in `recruiting-metrics`, in a **lightweight** vers
 | The local model picks poorly between the informational and the action route | Very clear tool descriptions, a small set of test cases, document the results before changing model |
 | Spend gets out of hand (only if the API is enabled) | The D9 controls, mainly the cap on the account |
 | Ingestion gets mistaken for a chat action | D2, and confirm with the lead if needed |
-| Real data in the future | Local or client-approved embeddings and LLM, per `responsible-ai-usage` |
+| Real data in the future | Local or client-approved embeddings and LLM, per the team's rules for responsible AI use |
 | NetworkX falls short | An isolated query interface (D5) and migration to Kùzu |
 
 **Development path and improvements:** see `docs/roadmap.md`.

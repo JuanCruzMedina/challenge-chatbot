@@ -5,7 +5,7 @@ Todos los datos de esta guía son **inventados** (una empresa ficticia, "Demo St
 ## 1. Cómo levantarlo
 
 ```
-cd ~/craftlabs/challenge-chatbot
+cd challenge-chatbot
 uv run python scripts/seed_workspace.py          # deja el workspace limpio (var/workspace)
 uv run langgraph dev --no-browser                # servidor en http://localhost:2024
 ```
@@ -223,7 +223,7 @@ Fijate quién lidera tracking-service y anotalo en un documento docs/lider.md de
 Se corre en la terminal, no en el chat. El PR es inventado (`data/ecosystem/prs/pr-101-payments-api-v2/pr.yaml`: payments-api v2 con reintentos automáticos y v1 deprecada). `--dry-run` trabaja sobre una copia y no cambia nada real; cada corrida cuesta centavos.
 
 ```bash
-cd ~/craftlabs/challenge-chatbot
+cd challenge-chatbot
 LLM_PROVIDER=anthropic uv run python -m ecosystem_assistant.pr_review data/ecosystem/prs/pr-101-payments-api-v2/pr.yaml --dry-run
 ```
 
