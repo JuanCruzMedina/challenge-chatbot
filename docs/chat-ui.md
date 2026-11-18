@@ -48,7 +48,7 @@ def factory(workspace):
     return Agent.open(chat=chat, workspace=workspace, audit_file=work / "audit.jsonl", knowledge=knowledge)
 
 typed = iter(["Who owns the tracking service?", "hi", "/exit"])
-main(["--workspace", str(work / "workspace")], agent_factory=factory, read=lambda prompt: next(typed))
+main(["--workspace", str(work / "workspace")], agent_factory=factory, read=lambda prompt: next(typed), write=print)
 ```
 
 ```text
@@ -57,6 +57,13 @@ assistant> tracking-team owns it, and Bruno Salas leads it [K1].
   ↳ called: query_knowledge
 assistant> Hello! How can I help?
 ```
+
+The example passes `write=print` so that the output is plain text and can be checked. Run for real
+(`uv run python -m ecosystem_assistant.chat`), the terminal renders the reply as markdown with `rich` (tables, bold,
+lists and the diff shown before an edit), prints the line of called tools and the greeting dimmed and failures in red.
+When the output is not a terminal (a pipe, a file) it is plain text with no escape sequences. The citation markers
+`[K1]` and `[D2]` stay as the model wrote them: they are the evidence ids to check, and dimming them would need a
+search in the reply's text, which the chat does not do.
 
 **With Claude instead of Ollama:** set `LLM_PROVIDER=anthropic` (see [agent.md](agent.md#using-claude-instead-of-the-local-model)).
 No local model server is needed, and the terminal prints the spending-cap message if the cap is reached.

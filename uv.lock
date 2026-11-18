@@ -743,6 +743,7 @@ dependencies = [
     { name = "networkx" },
     { name = "ollama" },
     { name = "pyyaml" },
+    { name = "rich" },
 ]
 
 [package.dev-dependencies]
@@ -761,6 +762,7 @@ requires-dist = [
     { name = "networkx", specifier = "~=3.7" },
     { name = "ollama", specifier = "~=0.6" },
     { name = "pyyaml", specifier = "~=6.0" },
+    { name = "rich", specifier = ">=14" },
 ]
 
 [package.metadata.requires-dev]

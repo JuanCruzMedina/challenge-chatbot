@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from ecosystem_assistant.agent.agent import Agent
+from ecosystem_assistant.chat.render import RichPrinter
 from ecosystem_assistant.chat.terminal import run_chat
 
 
@@ -19,16 +20,21 @@ def main(
     argv: list[str] | None = None,
     agent_factory: Callable[[Path | None], Any] = lambda workspace: Agent.open(workspace=workspace),
     read: Callable[[str], str] = input,
-    write: Callable[[str], Any] = print,
+    write: Callable[[str], Any] | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="python -m ecosystem_assistant.chat", description=__doc__)
     parser.add_argument("--workspace", type=Path, default=None,
                         help="the workspace to read and write (default: AGENT_DATA_ROOT or var/workspace)")
     args = parser.parse_args(argv)
+    outputs: dict[str, Callable[[str], Any]] = {}
+    if write is None:  # the real terminal: rendered replies, dimmed notes, red errors
+        printer = RichPrinter()
+        write = printer.line
+        outputs = {"write_reply": printer.reply, "write_note": printer.note, "write_error": printer.error}
 
     async def session() -> None:
         async with agent_factory(args.workspace) as agent:
-            await run_chat(agent, read, write)
+            await run_chat(agent, read, write, **outputs)
 
     try:
         asyncio.run(session())

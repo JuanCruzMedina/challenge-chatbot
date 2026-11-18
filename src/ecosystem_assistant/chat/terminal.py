@@ -26,10 +26,20 @@ async def run_chat(
     agent: ChatAgent,
     read: Callable[[str], str] = input,
     write: Callable[[str], Any] = print,
+    write_reply: Callable[[str], Any] | None = None,
+    write_note: Callable[[str], Any] | None = None,
+    write_error: Callable[[str], Any] | None = None,
 ) -> None:
-    """Talk to the agent until ``/exit`` or the end of the input. The conversation is kept between turns."""
+    """Talk to the agent until ``/exit`` or the end of the input. The conversation is kept between turns.
+
+    ``write`` prints plain lines. The optional outputs let a caller show replies, notes (the greeting and the line of
+    called tools) and errors in their own way; each one falls back to ``write``, so a plain caller sees plain text.
+    """
+    show_reply = write_reply or (lambda text: write(f"assistant> {text}"))
+    show_note = write_note or write
+    show_error = write_error or write
     history: list[BaseMessage] = []
-    write(f"Type your message, or {EXIT_COMMAND} to leave.")
+    show_note(f"Type your message, or {EXIT_COMMAND} to leave.")
     while True:
         try:
             line = read(PROMPT).strip()
@@ -44,10 +54,10 @@ async def run_chat(
         try:
             reply = await agent.chat(pending)
         except (AgentModelError, LLMUnavailableError) as error:
-            write(f"[error] {error}")  # the turn is dropped from the history, so a retry does not duplicate it
+            show_error(f"[error] {error}")  # the turn is dropped from the history, so a retry does not duplicate it
             continue
         history = [*pending, *reply.messages]
-        write(f"assistant> {reply.text}")
+        show_reply(reply.text)
         if reply.tool_calls:
             names = ", ".join(dict.fromkeys(call.name for call in reply.tool_calls))
-            write(f"  ↳ called: {names}")
+            show_note(f"  ↳ called: {names}")
