@@ -220,6 +220,26 @@ scripted models. Nothing is claimed about `qwen2.5:7b-instruct`: the run with Ol
   measure that, and tool descriptions are the lever to improve it.
 - An informational question costs about four model calls (the agent's decision, the flow's plan, the flow's answer
   and the agent's final reply), so it is slow on a local model.
+
+## Measured cost and time per turn
+
+Measured on 2026-11-18 with `claude-haiku-5-5`, one run, a throwaway script that wraps the ledger's `record` to log
+each call (the script is not kept in the repository):
+
+| Turn | Calls | Input / output tokens | Time | Cost (estimate) |
+|---|---|---|---|---|
+| A question (owner and lead) | 4 | 9,194 / 308 | 3.9 s | $0.0011 |
+| A question answered from a runbook | 4 | 9,626 / 774 | 5.5 s | $0.0014 |
+| All teams and their leads | 4 | 9,282 / 558 | 4.4 s | $0.0012 |
+| Look up and write (append) | 5 | 16,339 / 963 | 6.6 s | $0.0021 |
+| A greeting | 1 | 3,419 / 48 | 0.9 s | $0.0004 |
+
+Each call takes about one second and they run one after another, so the time is the number of calls. The two calls of
+the agent carry the system prompt and the tool schemas (about 3,400 tokens) and are the biggest inputs. No prompt
+caching is used. At these prices a dollar pays for roughly 800 to 900 questions, so cost is not a problem today;
+latency is the visible part. Caching the fixed prefix could cut about 40 % of the input cost (about $0.0005 per
+question) and little time; removing the agent's final call would save one second but the agent would stop composing
+the answer, so neither is done.
 - Editing a document and marking it obsolete show a diff first and write only after the person agrees (the server
   setting `ACTIONS_CONFIRM_EDITS`, on by default). Creating a document and appending text are direct, because they
   overwrite nothing; every write is in the audit log.
