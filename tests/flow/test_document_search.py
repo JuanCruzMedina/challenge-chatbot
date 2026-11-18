@@ -44,13 +44,13 @@ def test_passages_below_the_minimum_score_are_dropped_and_counted(sample_index: 
     everything = search_documents(sample_index, QUESTION, Plan(), min_score=0.0, k=5)
     nothing = search_documents(sample_index, QUESTION, Plan(), min_score=1.01, k=5)
 
-    assert len(everything.passages) == 5 and everything.below_threshold == 0
+    assert len([p for p in everything.passages if not p.neighbour]) == 5 and everything.below_threshold == 0
     assert nothing.passages == [] and nothing.below_threshold == 5
 
     cut = everything.passages[2].score
     partial = search_documents(sample_index, QUESTION, Plan(), min_score=cut, k=5)
     assert all(p.score >= cut for p in partial.passages)
-    assert len(partial.passages) + partial.below_threshold == 5
+    assert len([p for p in partial.passages if not p.neighbour]) + partial.below_threshold == 5
 
 
 def test_obsolete_documents_are_excluded_unless_the_plan_asks_for_them(tmp_path: Path) -> None:

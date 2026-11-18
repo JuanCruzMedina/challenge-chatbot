@@ -211,3 +211,7 @@ An extra probe with five questions that are not in the set gave four right answe
 ## Size of graph answers
 
 Each graph answer is cut at 3,000 characters (12,000 for all the evidence). A cut answer is marked `truncated` on its fact and in the trace step `graph_queries`, because a cut list looks like a complete one. `tests/flow/test_fact_size_guard.py` runs every catalog query on the sample data and fails if one is cut or if a new query has no case there: a query that returns long lists must be made compact (see `teams_overview`) before it ships.
+
+## Neighbour sections
+
+The search returns the sections that best match the question, and a document is several sections: a runbook has a symptom, a diagnosis and a fix, and a question usually matches only the first. So, after the ranked sections, the flow adds the other sections of the best-ranked document, in document order, at most four, marked `neighbour` (in the passages the knowledge tool returns too). Nothing is added from other documents, nothing is repeated, and nothing is added when no section reaches the minimum score. Ranked sections go first in the evidence, so the character budget cuts neighbours first. Before this, the question "A customer sees a stale price. What should we do?" passed 1 to 2 of 6 runs with Claude (the steps were not retrieved); after it, 6 of 6.

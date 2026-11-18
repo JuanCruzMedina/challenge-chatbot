@@ -13,6 +13,7 @@ from ecosystem_assistant.knowledge.flow.plan import Plan, PlannedQuery
 from ecosystem_assistant.knowledge.graph.queries import KnowledgeGraph
 from ecosystem_assistant.knowledge.retrieval.index import RetrievalIndex
 
+MAX_NEIGHBOURS = 4
 FACT_MAX_CHARS = 3000
 MAX_EVIDENCE_CHARS = 12000
 TRUNCATED = " …[truncated]"
@@ -40,6 +41,7 @@ class Passage:
     client: str
     service: str
     status: str
+    neighbour: bool = False  # not ranked: another section of the best document, added for context
 
 
 @dataclass
@@ -99,7 +101,27 @@ def search_documents(index: RetrievalIndex, question: str, plan: Plan, min_score
                 h.citation.client, h.citation.service, h.citation.status)
         for number, h in enumerate(kept, start=1)
     ]
+    if kept:
+        passages += _neighbour_sections(index, kept, start=len(passages) + 1)
     return SearchResult(passages, below_threshold=len(hits) - len(kept), searched=len(hits))
+
+
+def _neighbour_sections(index: RetrievalIndex, kept: list[Any], start: int) -> list[Passage]:
+    """The other sections of the best-ranked document, in document order, as context for its ranked sections.
+
+    A runbook is several sections and the question often matches only one of them (the symptom), while the answer is
+    in another (the steps). Only the best document is completed, at most ``MAX_NEIGHBOURS`` sections, and a section
+    that was ranked already is not repeated.
+    """
+    best = kept[0]
+    ranked = {(h.citation.path, h.citation.heading_path) for h in kept}
+    extra = [c for c in index.chunks_of(best.citation.path)
+             if (c["metadata"]["path"], c["metadata"]["heading_path"]) not in ranked][:MAX_NEIGHBOURS]
+    return [
+        Passage(f"D{number}", chunk["text"], best.score, meta["path"], meta["heading_path"], meta["title"],
+                meta["client"], meta["service"], meta["status"], neighbour=True)
+        for number, chunk in enumerate(extra, start=start) for meta in [chunk["metadata"]]
+    ]
 
 
 # --- putting it together for the model ----------------------------------------------------------

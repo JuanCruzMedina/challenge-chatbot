@@ -47,6 +47,7 @@ class PassageInfo:
     exact: bool = False
     service: str = ""
     doc_path: str = ""
+    neighbour: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -60,7 +61,7 @@ def passage_info(passage: Any, file_text: str | None = None) -> PassageInfo:
     exact = not truncated and file_text is not None and body in file_text
     service, doc_path = _service_and_path(passage.path)
     return PassageInfo(passage.id, passage.path, passage.heading_path, body[:MAX_PASSAGE_CHARS], truncated, exact,
-                       service, doc_path)
+                       service, doc_path, passage.neighbour)
 
 
 def _service_and_path(path: str) -> tuple[str, str]:
