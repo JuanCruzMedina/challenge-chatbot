@@ -13,8 +13,8 @@ from ecosystem_assistant.knowledge.flow.plan import Plan, PlannedQuery
 from ecosystem_assistant.knowledge.graph.queries import KnowledgeGraph
 from ecosystem_assistant.knowledge.retrieval.index import RetrievalIndex
 
-FACT_MAX_CHARS = 1500
-MAX_EVIDENCE_CHARS = 9000
+FACT_MAX_CHARS = 3000
+MAX_EVIDENCE_CHARS = 12000
 TRUNCATED = " …[truncated]"
 
 
@@ -26,6 +26,7 @@ class Fact:
     found: bool
     text: str               # compact JSON of the result, or a "not found" note with suggestions
     sources: list[str]
+    truncated: bool = False  # the text was cut at the cap: the list may be incomplete
 
 
 @dataclass(frozen=True)
@@ -76,9 +77,10 @@ def run_graph_queries(graph: KnowledgeGraph, queries: list[PlannedQuery],
             names = ", ".join(s["name"] for s in data["suggestions"]) or "none"
             text = f"Not found: {data['query']!r}. Close names: {names}."
             sources = []
-        if len(text) > max_chars:
+        cut = len(text) > max_chars
+        if cut:
             text = text[:max_chars] + TRUNCATED
-        facts.append(Fact(f"K{number}", query.method, dict(query.arguments), bool(data["found"]), text, sources))
+        facts.append(Fact(f"K{number}", query.method, dict(query.arguments), bool(data["found"]), text, sources, cut))
     return facts
 
 

@@ -180,9 +180,9 @@ To check the whole path with real calls (three tiny ones, estimated at $0.00015;
 LIVE_LLM=1 uv run python scripts/live_check.py --yes
 ```
 
-**Status: the three-call check was not run; the routing evaluation was.** Everything above is tested with fake clients and fake transports; the probe of task 1.2 made three
+**Status: the three-call check was run on 2026-11-17 and passed 3/3 (about $0.0002); the routing evaluation was run too.** Everything above is tested with fake clients and fake transports; the probe of task 1.2 made three
 real calls (JSON with a schema, a plain reply, an effort setting through the chat model) and the login session worked.
-The full `live_check` has not been run. The routing evaluation was run with Claude (16/16, see below).
+The full `live_check` was run with Claude Haiku 5.5: the flow's JSON plan, a plain agent reply and a tool call all passed. The routing evaluation was run with Claude (19/19, see below).
 
 ## The routing evaluation
 

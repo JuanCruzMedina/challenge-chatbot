@@ -60,7 +60,7 @@ class FlowNodes:
 
     def graph_queries(self, state: FlowState) -> dict[str, Any]:
         facts = run_graph_queries(self.graph, state["outcome"].plan.graph_queries)
-        executed = [{"id": f.id, "method": f.method, "found": f.found} for f in facts]
+        executed = [{"id": f.id, "method": f.method, "found": f.found, "truncated": f.truncated} for f in facts]
         step = TraceStep("graph_queries", f"{len(facts)} queries", {"executed": executed})
         return {"facts": facts, "trace": [step]}
 

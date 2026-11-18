@@ -207,3 +207,7 @@ An extra probe with five questions that are not in the set gave four right answe
 - **One question at a time**: no memory of earlier turns.
 - **Latency** depends on the machine: about 7 seconds per question here with a 7B model.
 - A document written from the chat is searchable but unknown to the graph until its manifest lists it (to be handled by the ingestion change).
+
+## Size of graph answers
+
+Each graph answer is cut at 3,000 characters (12,000 for all the evidence). A cut answer is marked `truncated` on its fact and in the trace step `graph_queries`, because a cut list looks like a complete one. `tests/flow/test_fact_size_guard.py` runs every catalog query on the sample data and fails if one is cut or if a new query has no case there: a query that returns long lists must be made compact (see `teams_overview`) before it ships.
