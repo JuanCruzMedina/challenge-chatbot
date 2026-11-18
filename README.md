@@ -42,7 +42,7 @@ With Claude, spending is estimated in a local ledger and capped (`ANTHROPIC_MAX_
 
 ## Try it
 
-[docs/guia-de-prueba.md](docs/guia-de-prueba.md) (in Spanish) has the invented data in tables and 17 phrases to paste, each with the answer to expect. A short sample:
+[docs/test-guide.md](docs/test-guide.md) has the invented data in tables and 17 phrases to paste, each with the answer to expect. A short sample:
 
 | Say | Expect |
 | --- | --- |
