@@ -32,12 +32,18 @@ class WorkspaceError(ToolError):
 class Workspace:
     root: Path
     audit_file: Path
+    confirm_edits: bool = False                      # edits and obsolete marks are only previewed until confirmed
+    allowed_services: frozenset[str] | None = None   # None: every service may be written
 
     @classmethod
     def from_env(cls) -> "Workspace":
+        """The server's settings. Confirmation is on unless ``ACTIONS_CONFIRM_EDITS=off``."""
+        allowed = [s.strip() for s in os.environ.get("ACTIONS_ALLOWED_SERVICES", "").split(",") if s.strip()]
         return cls(
             root=Path(os.environ.get("DOCS_WORKSPACE", DEFAULT_WORKSPACE)),
             audit_file=Path(os.environ.get("ACTIONS_AUDIT_FILE", DEFAULT_AUDIT_FILE)),
+            confirm_edits=os.environ.get("ACTIONS_CONFIRM_EDITS", "on").strip().lower() != "off",
+            allowed_services=frozenset(allowed) if allowed else None,
         )
 
     # --- services -------------------------------------------------------------------
@@ -69,6 +75,11 @@ class Workspace:
 
     def resolve_doc(self, service: str, doc_path: str) -> Path:
         base = self.service_dir(service)
+        if self.allowed_services is not None and service not in self.allowed_services:
+            raise WorkspaceError(
+                f"this session may only change documents of: {', '.join(sorted(self.allowed_services))}. "
+                f"{service!r} is not one of them; nothing was written."
+            )
         validate_relative_md(doc_path)
         parts = PurePosixPath(doc_path).parts
         if parts[:2] == ("repos", service):

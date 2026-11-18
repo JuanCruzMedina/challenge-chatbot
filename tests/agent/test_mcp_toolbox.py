@@ -28,7 +28,8 @@ def server_processes() -> int:
 
 
 def declared_by_the_server(workspace_dir: Path, audit_file: Path) -> dict[str, Any]:
-    server = build_server(Workspace(workspace_dir, audit_file))
+    # The server process asks for confirmation by default, so the reference server does too.
+    server = build_server(Workspace(workspace_dir, audit_file, confirm_edits=True))
 
     async def listing():
         async with Client(server) as client:

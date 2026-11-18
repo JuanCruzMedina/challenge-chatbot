@@ -5,7 +5,7 @@ import difflib
 import json
 import shutil
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,8 +19,17 @@ from ecosystem_assistant.pr_review.pull_request import PullRequest
 MAX_PATCH_CHARS = 4000
 MAX_TOTAL_PATCH_CHARS = 12000
 
-# Opens an agent on a workspace: (workspace, audit file or None, scratch folder or None) -> async context manager.
-AgentOpener = Callable[[Path, Path | None, Path | None], AbstractAsyncContextManager[Any]]
+# Opens an agent on a workspace: (workspace, audit file or None, scratch folder or None, environment of the actions
+# server) -> async context manager.
+AgentOpener = Callable[[Path, Path | None, Path | None, Mapping[str, str]], AbstractAsyncContextManager[Any]]
+
+
+def server_environment(pr: PullRequest) -> dict[str, str]:
+    """What the actions server is told for a review: write only the PR's service, and do not wait for confirmation.
+
+    The server enforces it, so a PR text that asks for more cannot get it, whatever the model does.
+    """
+    return {"ACTIONS_ALLOWED_SERVICES": pr.service, "ACTIONS_CONFIRM_EDITS": "off"}
 
 
 def call_status(record: ToolCallRecord) -> str:
@@ -129,7 +138,7 @@ async def review_pull_request(
 async def _run(pr: PullRequest, root: Path, audit: Path | None, scratch: Path | None,
                agent_open: AgentOpener, dry_run: bool) -> ReviewReport:
     before = snapshot(root)
-    async with agent_open(root, audit, scratch) as agent:
+    async with agent_open(root, audit, scratch, server_environment(pr)) as agent:
         reply = await agent.chat(build_message(pr))
     diffs = diffs_between(before, snapshot(root))
     return ReviewReport(

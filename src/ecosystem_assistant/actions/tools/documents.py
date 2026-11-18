@@ -6,6 +6,7 @@ in this package (design.md D-2). Nothing here reads the index, the graph or an L
 """
 from __future__ import annotations
 
+import difflib
 import json
 import re
 from typing import Annotated, Any
@@ -24,6 +25,17 @@ _OBSOLETE_LINE = re.compile(r"(?m)^status:\s*obsolete\s*$")
 
 # --- behavior -----------------------------------------------------------------------
 
+def _preview(service: str, doc_path: str, before: str, after: str) -> dict[str, Any]:
+    """What an edit would change, as a diff. Nothing is written."""
+    diff = "".join(difflib.unified_diff(before.splitlines(keepends=True), after.splitlines(keepends=True),
+                                        fromfile=f"a/{doc_path}", tofile=f"b/{doc_path}"))
+    return {
+        "outcome": "needs_confirmation", "service": service, "doc_path": doc_path, "diff": diff,
+        "hint": ("Nothing was written. Show this change to the person. If they agree, call this tool again with the "
+                 "same arguments and confirmed=true."),
+    }
+
+
 def create_document(ws: Workspace, service: str, doc_path: str, content: str) -> dict[str, Any]:
     target = ws.resolve_doc(service, doc_path)
     if not isinstance(content, str) or not content.strip():
@@ -37,7 +49,8 @@ def create_document(ws: Workspace, service: str, doc_path: str, content: str) ->
     return {"outcome": "created", "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
 
 
-def replace_in_document(ws: Workspace, service: str, doc_path: str, old_text: str, new_text: str) -> dict[str, Any]:
+def replace_in_document(ws: Workspace, service: str, doc_path: str, old_text: str, new_text: str,
+                        confirmed: bool = False) -> dict[str, Any]:
     target = ws.resolve_doc(service, doc_path)
     if not isinstance(old_text, str) or old_text == "":
         raise WorkspaceError("old_text must not be empty: quote the exact passage to replace")
@@ -61,7 +74,10 @@ def replace_in_document(ws: Workspace, service: str, doc_path: str, old_text: st
                 "if it was not unique)."
             ),
         }
-    ws.write_atomic(target, text.replace(old_text, new_text, 1))
+    updated = text.replace(old_text, new_text, 1)
+    if ws.confirm_edits and not confirmed:
+        return _preview(service, doc_path, text, updated)
+    ws.write_atomic(target, updated)
     ws.audit("update_document", service, doc_path)
     return {"outcome": "updated", "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
 
@@ -87,7 +103,7 @@ def append_document(ws: Workspace, service: str, doc_path: str, text: str) -> di
 
 
 def set_obsolete(
-    ws: Workspace, service: str, doc_path: str, reason: str, replaced_by: str | None
+    ws: Workspace, service: str, doc_path: str, reason: str, replaced_by: str | None, confirmed: bool = False
 ) -> dict[str, Any]:
     target = ws.resolve_doc(service, doc_path)
     if not isinstance(reason, str) or not reason.strip():
@@ -111,6 +127,8 @@ def set_obsolete(
         updated = block + text[front.end():]
     else:
         updated = f"---{newline}{newline.join(lines)}{newline}---{newline}" + text
+    if ws.confirm_edits and not confirmed:
+        return _preview(service, doc_path, text, updated)
     ws.write_atomic(target, updated)
     ws.audit("mark_document_obsolete", service, doc_path)
     return {"outcome": "marked_obsolete", "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
@@ -118,6 +136,11 @@ def set_obsolete(
 
 # --- MCP tools ----------------------------------------------------------------------
 
+Confirmed = Annotated[
+    bool,
+    Field(description=("Only when the tool answered 'needs_confirmation': set it to true to repeat the same call "
+                       "after the person has seen the preview and agreed. Otherwise leave it out.")),
+]
 Service = Annotated[
     str,
     Field(
@@ -131,7 +154,16 @@ DocPath = Annotated[
 ]
 
 
+PREVIEW_NOTE = (
+    "This server asks for confirmation: call it directly with the change (do not describe it or ask permission "
+    "first); the first call writes nothing and returns a preview (outcome 'needs_confirmation'). Show that preview "
+    "to the person and, once they agree, repeat the same call with confirmed=true. "
+)
+
+
 def register(server: MCPServer, workspace: Workspace) -> None:
+    preview_note = PREVIEW_NOTE if workspace.confirm_edits else ""
+
     @server.tool(
         description=(
             "Create a NEW markdown document for a service in the documentation sources. Use it when the "
@@ -171,8 +203,8 @@ def register(server: MCPServer, workspace: Workspace) -> None:
             "or update documentation. old_text must be copied exactly from the document and must appear "
             "exactly once. If the text is no longer there (someone else changed the document) or appears "
             "more than once, the tool writes nothing and returns outcome 'conflict': tell the user and "
-            "retry with the current exact text. Do NOT use it to create files (use add_document) or to "
-            "answer questions about documentation."
+            "retry with the current exact text. " + preview_note + "Do NOT use it to create files (use "
+            "add_document) or to answer questions about documentation."
         )
     )
     def update_document(
@@ -180,15 +212,16 @@ def register(server: MCPServer, workspace: Workspace) -> None:
         doc_path: DocPath,
         old_text: Annotated[str, Field(min_length=1, description="Exact passage to replace, copied verbatim.")],
         new_text: Annotated[str, Field(description="Replacement text (may be empty to delete the passage).")],
+        confirmed: Confirmed = False,
     ) -> dict[str, Any]:
-        return replace_in_document(workspace, service, doc_path, old_text, new_text)
+        return replace_in_document(workspace, service, doc_path, old_text, new_text, confirmed)
 
     @server.tool(
         description=(
             "Flag an existing document as obsolete by adding 'status: obsolete' to its front matter. Use it "
             "when the user says a document is outdated, deprecated or replaced by another. It does not "
-            "delete the document or change its body, and marking twice changes nothing. Do NOT use it to "
-            "edit content (use update_document) or to answer questions about documentation."
+            "delete the document or change its body, and marking twice changes nothing. " + preview_note +
+            "Do NOT use it to edit content (use update_document) or to answer questions about documentation."
         )
     )
     def mark_document_obsolete(
@@ -198,5 +231,6 @@ def register(server: MCPServer, workspace: Workspace) -> None:
         replaced_by: Annotated[
             str | None, Field(description="Optional path of the document that replaces it, e.g. 'docs/api-v2.md'.")
         ] = None,
+        confirmed: Confirmed = False,
     ) -> dict[str, Any]:
-        return set_obsolete(workspace, service, doc_path, reason, replaced_by)
+        return set_obsolete(workspace, service, doc_path, reason, replaced_by, confirmed)

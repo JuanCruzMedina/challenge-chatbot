@@ -85,8 +85,9 @@ chat = ScriptedChat(script=[
 pr = PullRequest("PR-202", "demo-grocery/payments-service", "Automatic retries for payments-api v1",
                  "payments-api v1 now retries a failed charge up to 3 times.", [Change("src/charges.py", "modified")])
 
-def open_agent(workspace, audit, scratch):
-    return Agent.open(chat=chat, workspace=workspace, audit_file=work / "audit.jsonl", knowledge=knowledge)
+def open_agent(workspace, audit, scratch, server_env):
+    return Agent.open(chat=chat, workspace=workspace, audit_file=work / "audit.jsonl", knowledge=knowledge,
+                      extra_env=server_env)
 
 report = asyncio.run(review_pull_request(pr, work / "workspace", open_agent, dry_run=True))
 print(report.render())
@@ -146,7 +147,8 @@ jobs:
 
 - **The pull request text is untrusted input to a model that can write documents.** The prompt tells the model to
   treat it as data and the tools can only write markdown inside the workspace, but a hostile description could still
-  push a misleading sentence into a document. Use `--dry-run` and read the diffs when the source is not trusted.
+  push a misleading sentence into a document **of the PR's own service**. Use `--dry-run` and read the diffs when the source is not trusted.
+- **A review cannot leave the PR's service.** The review starts the actions server with `ACTIONS_ALLOWED_SERVICES` set to the service of the PR and `ACTIONS_CONFIRM_EDITS=off`. The server enforces the limit, so a description that asks to change another service's documents is rejected whatever the model does (`test_a_write_to_another_service_is_rejected_whatever_the_pr_text_says`). Confirmation is off because the report and `--dry-run` are the safeguard of a review.
 - Real pull requests and real repositories are out of scope (invented data only). Sending real code to an external
   model needs a decision about privacy first.
 - Fetching the pull request from GitHub, and committing or opening a pull request with the result, are not built.

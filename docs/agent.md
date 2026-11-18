@@ -46,6 +46,7 @@ The prompt names no tool, but it gives these rules (checked by `tests/agent/test
 - **A confirmation is the order to act.** After a "yes" the agent writes in that turn; it asks again only for a value a tool needs and it does not know.
 - **Conflicts are checked, then asked.** Before writing a fact about owners, leads or other documented data, the agent checks it with the knowledge tool. If it contradicts the documentation it says what the documentation says and asks which is right; if not, it writes without asking.
 - **Edits quote the text, taken from the passages.** `query_knowledge` returns, besides the answer, the document passages it found (path, section, text, and whether the text is `exact` and not cut). To change an existing document the agent quotes the text to replace from an exact passage, asks again for the section when it is not there, and never invents the text. A wrong quote ends in the update tool's `conflict` result, which tells the model to retry.
+- **A preview is shown, then confirmed.** The first call to an edit tool only returns a diff; the agent shows it and waits, and repeats the call with `confirmed` only after the person agrees.
 - **A gap is not a conflict.** A fact the documentation does not mention is new and is written without asking; only a contradiction is asked about.
 - **Paths are inside the service.** The write tools take `doc_path` as the passages give it (`docs/api.md`), never the workspace path `repos/<service>/…`, which the server rejects.
 - **Write tools handle markdown documents only.** A new fact goes into a markdown document (for example `docs/product-owner.md`), not into `service.yaml`.
@@ -152,6 +153,8 @@ supports tool calling), `OLLAMA_HOST` (`http://localhost:11434`) and `OLLAMA_TIM
 | `AGENT_DATA_ROOT` | `var/workspace` | The workspace shared by the actions and the knowledge side. |
 | `ACTIONS_LOG_LEVEL` | `WARNING` | Log level of the MCP server process (its INFO logs would pollute the terminal). |
 | `ACTIONS_TOOLS_PACKAGE` | the built-in package | Where the server finds its tools. |
+| `ACTIONS_CONFIRM_EDITS` | `on` | `off` turns the preview of edits off (the routing evaluation and the PR review do). |
+| `ACTIONS_ALLOWED_SERVICES` | all | Limits which services the server may write. |
 
 ## Using Claude instead of the local model
 
@@ -205,6 +208,8 @@ of that day (four MCP tools): **16/16** (questions 6/6, actions 4/4, mixed 2/2, 
 $0.016 by the ledger's estimate. Every mixed turn called `query_knowledge` before the write tool, and the chat and
 unsupported turns called no tool.
 
+**Known weak spot (observed 2026-11-18).** The question "A customer sees a stale price. What should we do?" (q03) is answered from the whole runbook only when the agent enriches the question with keywords (for example "pricing cache"); when it passes the question as written, the search returns the symptom section but not the steps, and the answer says the steps are not available. In repeated runs of that single turn it passed 6 of 9 times on the earlier version and 1 to 2 of 6 after the confirmation change, a difference that is within the noise of such small samples but shows the dependence. The fix belongs to the search (return neighbouring sections of the best document), not to the prompt.
+
 **Second run, after `fix-team-leads-and-doc-paths`** (same model, 19 turns, three of them added from the first real session: all teams with their leads, and two appends to a README): **19/19** (questions 7/7, actions 4/4, mixed 4/4, chat 2/2, unsupported 2/2), about $0.03. Before the fix, the same session had shown a wrong-path write and an incomplete list of leads. Read it with care: 19 turns written by the project, one run (the model is not
 deterministic), one model. The grading rules, the report and the isolation between turns are also tested with
 scripted models. Nothing is claimed about `qwen2.5:7b-instruct`: the run with Ollama has not been made.
@@ -215,8 +220,9 @@ scripted models. Nothing is claimed about `qwen2.5:7b-instruct`: the run with Ol
   measure that, and tool descriptions are the lever to improve it.
 - An informational question costs about four model calls (the agent's decision, the flow's plan, the flow's answer
   and the agent's final reply), so it is slow on a local model.
-- Writes have no confirmation step. This is deliberate: the workspace is a throwaway copy and every write is in the
-  audit log.
+- Editing a document and marking it obsolete show a diff first and write only after the person agrees (the server
+  setting `ACTIONS_CONFIRM_EDITS`, on by default). Creating a document and appending text are direct, because they
+  overwrite nothing; every write is in the audit log.
 - Documents created from the chat are not known to the graph until a manifest lists them (see
   [roadmap.md](roadmap.md)).
 - `grounded` in a knowledge answer means "cites existing evidence", not "is true".

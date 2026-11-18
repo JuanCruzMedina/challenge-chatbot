@@ -51,6 +51,8 @@ uv run python scripts/seed_workspace.py      # create, or reset to a fresh copy
 | --- | --- | --- |
 | `DOCS_WORKSPACE` | `var/workspace` | Root of the workspace (`<root>/repos/<service>/...`) |
 | `ACTIONS_AUDIT_FILE` | `var/audit/actions.jsonl` | One JSON line per successful write |
+| `ACTIONS_CONFIRM_EDITS` | `on` | With `on`, `update_document` and `mark_document_obsolete` only return a preview (`outcome: needs_confirmation` with a `diff`) until the same call is repeated with `confirmed: true`. `off` writes at once. Creating and appending are never asked. |
+| `ACTIONS_ALLOWED_SERVICES` | unset (all) | Comma separated services this session may write. A write to another one fails naming the allowed ones and writes nothing. |
 
 The seed script replaces only its known entries (`company.yaml`, `company/`, `clients/`, `repos/`, `prs/`, the README), only inside a workspace it created itself (it leaves a `.seeded-workspace` marker), and refuses to touch anything else.
 

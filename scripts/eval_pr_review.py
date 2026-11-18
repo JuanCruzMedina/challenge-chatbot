@@ -99,10 +99,10 @@ async def _run_cases(cases: list[dict[str, Any]], chat: Any, flow_llm: Any, embe
             pr = parse_pull_request(case["pr"], case["id"])
             before = snapshot(workspace)
 
-            def opener(root: Path, audit: Path | None, _scratch: Path | None) -> Any:
+            def opener(root: Path, audit: Path | None, _scratch: Path | None, server_env: Any) -> Any:
                 service = KnowledgeService(root, index, flow_llm, min_score=min_score)
                 return Agent.open(chat=chat, workspace=root, audit_file=scratch / f"audit-{case['id']}.jsonl",
-                                  knowledge=service)
+                                  knowledge=service, extra_env=server_env)
 
             started = time.perf_counter()
             report = await review_pull_request(pr, workspace, opener)

@@ -9,7 +9,7 @@ import argparse
 import asyncio
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,8 @@ from ecosystem_assistant.pr_review.pull_request import PullRequestError, load_pu
 from ecosystem_assistant.pr_review.review import AgentOpener, review_pull_request
 
 
-def default_opener(workspace: Path, audit_file: Path | None, scratch: Path | None) -> Any:
+def default_opener(workspace: Path, audit_file: Path | None, scratch: Path | None,
+                   server_env: Mapping[str, str]) -> Any:
     """The real agent. A dry run gets its own index in the scratch folder so the project's index is not touched."""
     from ecosystem_assistant.agent.agent import Agent
     from ecosystem_assistant.agent.knowledge import KnowledgeService
@@ -26,7 +27,7 @@ def default_opener(workspace: Path, audit_file: Path | None, scratch: Path | Non
 
     index = RetrievalIndex(scratch / "index") if scratch is not None else RetrievalIndex()
     return Agent.open(workspace=workspace, audit_file=audit_file,
-                      knowledge=KnowledgeService(workspace, index, llm_from_env()))
+                      knowledge=KnowledgeService(workspace, index, llm_from_env()), extra_env=server_env)
 
 
 def main(

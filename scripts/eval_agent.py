@@ -5,6 +5,7 @@ Usage:
   uv run python scripts/eval_agent.py --embedder minilm      # real embeddings (the model must be cached)
   uv run python scripts/eval_agent.py --min-rate 0.7         # exit code 1 below 70 %
 
+The preview of edits is turned off here (`ACTIONS_CONFIRM_EDITS=off`): this evaluation measures which tool is chosen, in one turn.
 Every turn runs in a fresh copy of the sample ecosystem with its own actions audit log, and a throwaway index, so
 nothing a turn does can influence another and the project's own workspace and data are never touched.
 A question, a greeting or an impossible request must not call any action tool. An action must call the expected
@@ -128,7 +129,8 @@ async def _run_turns(turns: list[dict[str, Any]], chat: Any, flow_llm: Any, embe
             shutil.copytree(DATA_ROOT, baseline)
             service = KnowledgeService(workspace, index, flow_llm, min_score=min_score)
             started = time.perf_counter()
-            async with Agent.open(chat=chat, workspace=workspace, audit_file=audit, knowledge=service) as agent:
+            async with Agent.open(chat=chat, workspace=workspace, audit_file=audit, knowledge=service,
+                                  extra_env={"ACTIONS_CONFIRM_EDITS": "off"}) as agent:
                 reply = await agent.chat(turn["message"])
             elapsed = time.perf_counter() - started
             names: list[str] = []
