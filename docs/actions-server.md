@@ -8,9 +8,10 @@ Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is arc
 
 | Tool | Use it to | Arguments (required in bold) | Result |
 | --- | --- | --- | --- |
-| `add_document` | create a new markdown document | **`service`**, **`doc_path`**, **`content`** | `outcome: created` |
+| `add_document` | create a new markdown document, saying what it is about | **`service`**, **`doc_path`**, **`content`**, `about` | `outcome: created`; with `about`, also `about` (written) and `unresolved` (dropped names) |
 | `append_to_document` | add text at the end of a document, or create it (nothing to quote) | **`service`**, **`doc_path`**, **`text`** | `outcome: appended` or `created` |
 | `update_document` | replace one passage in an existing document | **`service`**, **`doc_path`**, **`old_text`**, **`new_text`** | `outcome: updated` or `outcome: conflict` |
+| `link_document` | set what an existing document is about (replaces the list; an empty list removes it) | **`service`**, **`doc_path`**, **`about`** | `outcome: linked`, `about`, `previous`, `unresolved` |
 | `mark_document_obsolete` | flag a document as outdated | **`service`**, **`doc_path`**, **`reason`**, `replaced_by` | `outcome: marked_obsolete` or `already_obsolete` |
 
 - `service` is a lowercase slug of an existing service folder, for example `payments-service`.
@@ -83,3 +84,7 @@ uv run pytest
 ```
 
 No test uses a real LLM or the network. `tests/test_architecture_isolation.py` fails if the actions package imports the retrieval, graph, agent or ingestion packages, or any LLM or network library.
+
+## Document links
+
+`about` is a list of exact names of services, APIs or events. The server checks them against the workspace (the service folders and the APIs and events their `service.yaml` declares); the names that match are written in the front matter of the document (`about: ["payments-api"]`) and the rest are not written and come back as `unresolved` with a hint, so a model can fix them or ask. `link_document` changes that one field of an existing document and returns the previous list, so a mistake can be undone; it never touches the text or other front matter fields. The knowledge graph reads the field (see [knowledge-graph.md](knowledge-graph.md)), and the next question already sees the new links because the agent refreshes the graph first.

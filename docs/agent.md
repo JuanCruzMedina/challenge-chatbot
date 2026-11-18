@@ -46,6 +46,7 @@ The prompt names no tool, but it gives these rules (checked by `tests/agent/test
 - **A confirmation is the order to act.** After a "yes" the agent writes in that turn; it asks again only for a value a tool needs and it does not know.
 - **Conflicts are checked, then asked.** Before writing a fact about owners, leads or other documented data, the agent checks it with the knowledge tool. If it contradicts the documentation it says what the documentation says and asks which is right; if not, it writes without asking.
 - **Edits quote the text, taken from the passages.** `query_knowledge` returns, besides the answer, the document passages it found (path, section, text, and whether the text is `exact` and not cut). To change an existing document the agent quotes the text to replace from an exact passage, asks again for the section when it is not there, and never invents the text. A wrong quote ends in the update tool's `conflict` result, which tells the model to retry.
+- **A new document says what it is about.** The model gives the exact names of the services, APIs or events it concerns (from the conversation or the knowledge tool, never invented); if it cannot tell it asks one question; afterwards it says which links it set and which names were left out.
 - **A preview is shown, then confirmed.** The first call to an edit tool only returns a diff; the agent shows it and waits, and repeats the call with `confirmed` only after the person agrees.
 - **A gap is not a conflict.** A fact the documentation does not mention is new and is written without asking; only a contradiction is asked about.
 - **Paths are inside the service.** The write tools take `doc_path` as the passages give it (`docs/api.md`), never the workspace path `repos/<service>/…`, which the server rejects.
@@ -108,7 +109,7 @@ print((work / "workspace/repos/tracking-service/docs/lead.md").read_text().split
 ```
 
 ```text
-['query_knowledge', 'add_document', 'append_to_document', 'update_document', 'mark_document_obsolete']
+['query_knowledge', 'add_document', 'append_to_document', 'update_document', 'mark_document_obsolete', 'link_document']
 ['query_knowledge'] | tracking-team owns it, and Bruno Salas leads it [K1].
 ['add_document'] | I created docs/lead.md.
 [] | Hello! How can I help?
@@ -189,7 +190,7 @@ The full `live_check` was run with Claude Haiku 5.5: the flow's JSON plan, a pla
 
 ## The routing evaluation
 
-`evaluation/agent.yaml` has 19 turns of five kinds: questions, actions, mixed (look up, then write), chat and
+`evaluation/agent.yaml` has 20 turns of five kinds: questions, actions, mixed (look up, then write), chat and
 unsupported requests. `scripts/eval_agent.py` runs each in its own fresh copy of the sample data and grades with no
 judge model:
 
@@ -209,6 +210,8 @@ $0.016 by the ledger's estimate. Every mixed turn called `query_knowledge` befor
 unsupported turns called no tool.
 
 **Weak spot found and fixed (2026-11-18).** The question "A customer sees a stale price. What should we do?" (q03) depended on the agent adding keywords to the question: written as is, the search returned the symptom of the runbook but not its steps. The flow now adds the other sections of the best document (see [informational-flow.md](informational-flow.md)); the same turn then passed 6 of 6 runs, and the full evaluation 18/19 with a02 failing once (it passed 6 of 6 when run alone, with and without the change).
+
+**Third run, after `add-document-links-writing`** (20 turns, one added for a document created with its links): **20/20**, about $0.04. The PR review set gave 5/6 with r02 (update a document) failing; run alone five times it passed 4 of 5 both with and without this change, so it is the model's variance on that case. By hand with Claude: a document about the payments flow was written with `about: ["payments-api"]`, a plain note with `about: ["orders-service"]`, and the next question "which documents talk about payments-api?" used `documents_about` and listed the new one.
 
 **Second run, after `fix-team-leads-and-doc-paths`** (same model, 19 turns, three of them added from the first real session: all teams with their leads, and two appends to a README): **19/19** (questions 7/7, actions 4/4, mixed 4/4, chat 2/2, unsupported 2/2), about $0.03. Before the fix, the same session had shown a wrong-path write and an incomplete list of leads. Read it with care: 19 turns written by the project, one run (the model is not
 deterministic), one model. The grading rules, the report and the isolation between turns are also tested with

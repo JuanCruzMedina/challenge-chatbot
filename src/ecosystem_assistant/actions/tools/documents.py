@@ -14,6 +14,7 @@ from typing import Annotated, Any
 from mcp.server.mcpserver import MCPServer
 from pydantic import Field
 
+from ecosystem_assistant.actions.front_matter import set_about
 from ecosystem_assistant.actions.workspace import Workspace, WorkspaceError, validate_relative_md
 
 NOT_INDEXED_NOTE = (
@@ -36,7 +37,14 @@ def _preview(service: str, doc_path: str, before: str, after: str) -> dict[str, 
     }
 
 
-def create_document(ws: Workspace, service: str, doc_path: str, content: str) -> dict[str, Any]:
+def unresolved_hint(unresolved: list[str]) -> str:
+    return ("These names match no service, API or event of the workspace and were not written: "
+            f"{', '.join(unresolved)}. Use the exact names (ask the person if you cannot tell) and set them with "
+            "the link tool.")
+
+
+def create_document(ws: Workspace, service: str, doc_path: str, content: str,
+                    about: list[str] | None = None) -> dict[str, Any]:
     target = ws.resolve_doc(service, doc_path)
     if not isinstance(content, str) or not content.strip():
         raise WorkspaceError("content must not be empty")
@@ -44,9 +52,19 @@ def create_document(ws: Workspace, service: str, doc_path: str, content: str) ->
         raise WorkspaceError(
             f"{doc_path!r} already exists for service {service!r}. Use update_document to change it."
         )
+    resolved: list[str] = []
+    unresolved: list[str] = []
+    if about is not None:
+        resolved, unresolved = ws.resolve_names(about)
+        content = set_about(content, resolved)
     ws.write_atomic(target, content)
     ws.audit("add_document", service, doc_path)
-    return {"outcome": "created", "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
+    result: dict[str, Any] = {"outcome": "created", "service": service, "doc_path": doc_path, "note": NOT_INDEXED_NOTE}
+    if about is not None:
+        result.update({"about": resolved, "unresolved": unresolved})
+        if unresolved:
+            result["hint"] = unresolved_hint(unresolved)
+    return result
 
 
 def replace_in_document(ws: Workspace, service: str, doc_path: str, old_text: str, new_text: str,
@@ -170,15 +188,22 @@ def register(server: MCPServer, workspace: Workspace) -> None:
             "user asks to add, write or create documentation (a runbook, guide, ADR, API page) that does "
             "not exist yet. Do NOT use it to change an existing document (use update_document), to mark "
             "one obsolete (use mark_document_obsolete), or to answer questions about documentation. "
-            "The new document becomes searchable only after the next ingestion run."
+            "The new document becomes searchable only after the next ingestion run. Say what the document is "
+            "about with `about`: the exact names of the services, APIs or events it concerns; names that match "
+            "nothing are not written and come back as unresolved."
         )
     )
     def add_document(
         service: Service,
         doc_path: DocPath,
         content: Annotated[str, Field(min_length=1, description="Full markdown content of the new document.")],
+        about: Annotated[
+            list[str] | None,
+            Field(description="Exact names of the services, APIs or events this document is about, e.g. "
+                              "['payments-service', 'payments-api']. Leave it out only when it is about none."),
+        ] = None,
     ) -> dict[str, Any]:
-        return create_document(workspace, service, doc_path, content)
+        return create_document(workspace, service, doc_path, content, about)
 
     @server.tool(
         description=(

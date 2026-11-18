@@ -14,7 +14,7 @@ from ecosystem_assistant.actions.server import ToolModuleError, build_server
 from ecosystem_assistant.actions.workspace import Workspace
 from tests.actions.helpers import payload, with_client
 
-DEFAULT_NAMES = {"add_document", "append_to_document", "update_document", "mark_document_obsolete"}
+DEFAULT_NAMES = {"add_document", "append_to_document", "update_document", "mark_document_obsolete", "link_document"}
 SERVER_PY = Path(__file__).resolve().parents[2] / "src" / "ecosystem_assistant" / "actions" / "server.py"
 
 NEW_TOOL = textwrap.dedent(

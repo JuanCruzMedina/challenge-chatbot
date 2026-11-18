@@ -159,3 +159,13 @@ turns:
     expect_effect:
       path: repos/orders-service/README.md
       contains: ["Leo Messi"]
+
+  # Document links (add-document-links-writing): a new document says what it is about.
+  - id: a07
+    kind: action
+    message: "Create the document docs/refunds.md for the payments-service saying that partial refunds are allowed within 30 days."
+    expect_tools: [add_document]
+    allow_tools: [query_knowledge]
+    expect_effect:
+      path: repos/payments-service/docs/refunds.md
+      contains: ["about:", "payments"]

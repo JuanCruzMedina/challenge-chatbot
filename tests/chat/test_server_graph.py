@@ -21,7 +21,7 @@ from tests.actions.test_extensibility import NEW_TOOL
 from tests.agent.conftest import run
 
 ROOT = Path(__file__).resolve().parents[2]
-MCP_TOOLS = ["add_document", "append_to_document", "update_document", "mark_document_obsolete"]
+MCP_TOOLS = ["add_document", "append_to_document", "update_document", "mark_document_obsolete", "link_document"]
 
 
 def server_processes() -> int:

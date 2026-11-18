@@ -113,3 +113,40 @@ def test_the_prompt_says_missing_data_is_not_a_conflict() -> None:
     assert "does not mention" in text and "not a conflict" in text
     assert "inside the service" in text and "doc_path" in text
     assert len(SYSTEM_PROMPT.splitlines()) < 40
+
+
+def test_the_prompt_says_a_new_document_states_what_it_is_about() -> None:
+    text = " ".join(SYSTEM_PROMPT.lower().split())
+    assert "what it is about" in text and "never invent names" in text and "ask one question" in text
+    assert len(SYSTEM_PROMPT.splitlines()) < 40
+
+
+def test_a_scripted_turn_creates_a_document_with_links_and_corrects_one(
+    workspace_dir: Path, audit_file: Path, tmp_path: Path
+) -> None:
+    import json
+
+    import yaml
+
+    chat = ScriptedChat(script=[
+        ai_tool("add_document", {"service": "payments-service", "doc_path": "docs/refunds.md",
+                                 "content": "# Refunds\n\nPartial refunds are allowed.\n",
+                                 "about": ["payments-api", "ghost-service"]}, "a"),
+        ai_tool("link_document", {"service": "payments-service", "doc_path": "docs/refunds.md",
+                                  "about": ["payments-api", "payments-service"]}, "b"),
+        ai_text("Created docs/refunds.md about payments-api; ghost-service did not exist, so I linked payments-service."),
+    ])
+
+    async def scenario():
+        async with Agent.open(chat=chat, workspace=workspace_dir, audit_file=audit_file,
+                              knowledge=knowledge_service(workspace_dir, tmp_path)) as agent:
+            return await agent.chat("Document partial refunds in payments-service.")
+
+    reply = run(scenario())
+
+    first = json.loads(reply.tool_calls[0].result)
+    assert first["unresolved"] == ["ghost-service"] and "ghost-service" in first["hint"]
+    assert json.loads(reply.tool_calls[1].result)["previous"] == ["payments-api"]
+    text = (workspace_dir / "repos/payments-service/docs/refunds.md").read_text(encoding="utf-8")
+    assert yaml.safe_load(text.split("---\n")[1])["about"] == ["payments-api", "payments-service"]
+    assert text.endswith("Partial refunds are allowed.\n")

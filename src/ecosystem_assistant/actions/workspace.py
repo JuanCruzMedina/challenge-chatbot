@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
+import yaml
 from mcp.server.mcpserver.exceptions import ToolError
 
 # src/ecosystem_assistant/actions/workspace.py -> repository root
@@ -70,6 +71,31 @@ class Workspace:
         if not resolved.is_relative_to(self.repos_dir.resolve()):
             raise WorkspaceError(f"service {service!r} resolves outside the workspace")
         return resolved
+
+    # --- names a document can be about ----------------------------------------------
+
+    def known_entities(self) -> set[str]:
+        """The services of the workspace and the APIs and events their manifests declare."""
+        names = set(self.list_services())
+        for manifest in sorted(self.repos_dir.glob("*/service.yaml")) if self.repos_dir.is_dir() else []:
+            try:
+                data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+            except (OSError, yaml.YAMLError):
+                continue
+            if not isinstance(data, dict):
+                continue
+            for entry in data.get("provides_apis") or []:
+                if isinstance(entry, dict) and entry.get("id"):
+                    names.add(str(entry["id"]))
+            for field in ("consumes_apis", "publishes_events", "subscribes_events"):
+                names.update(str(item) for item in data.get(field) or [])
+        return names
+
+    def resolve_names(self, names: list[str]) -> tuple[list[str], list[str]]:
+        """Split ``names`` into those that match a known entity and those that do not (both sorted, no repeats)."""
+        known = self.known_entities()
+        cleaned = sorted({str(n).strip() for n in names if str(n).strip()})
+        return [n for n in cleaned if n in known], [n for n in cleaned if n not in known]
 
     # --- documents ------------------------------------------------------------------
 
