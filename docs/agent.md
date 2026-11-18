@@ -52,7 +52,7 @@ The prompt names no tool, but it gives these rules (checked by `tests/agent/test
 - **Paths are inside the service.** The write tools take `doc_path` as the passages give it (`docs/api.md`), never the workspace path `repos/<service>/…`, which the server rejects.
 - **Write tools handle markdown documents only.** A new fact goes into a markdown document (for example `docs/product-owner.md`), not into `service.yaml`.
 
-These rules are guidance for the model. The tests with a scripted model prove that the prompt has them and that the loop runs the tools in order; how well a real model follows them has not been measured.
+These rules are guidance for the model. The tests with a scripted model prove that the prompt has them and that the loop runs the tools in order; how well a real model follows them was measured only on the small evaluation set below and by hand in the chat.
 
 ## Knowledge refresh
 

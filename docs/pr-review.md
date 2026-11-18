@@ -113,7 +113,7 @@ Model's explanation: The v1 rule said there were no automatic retries; the PR ad
 ## Measured with
 
 The behavior of the code (reading, message, decisions given a scripted model, report, dry run, exit codes, grading) is
-tested. **How well a real model decides has not been measured yet.** `evaluation/pr_review.yaml` has six invented pull
+tested. How well a real model decides was measured on a small set: with Claude Haiku 5.5 it passed **5/6 or 6/6** depending on the run (the case that updates an existing document passed 4 of 5 times alone). `evaluation/pr_review.yaml` has six invented pull
 requests (a new behavior with no document, a changed behavior with a document, and four that deserve nothing: a
 refactor, tests only, a typo, a dependency bump) and `scripts/eval_pr_review.py` grades them by the effect on the
 files, with no judge model:

@@ -117,4 +117,4 @@ ask a question, ask for an action, and report what happens.
 - No streaming of the reply token by token in the terminal; the whole reply is printed when the turn ends.
 - The conversation is not saved between sessions in the terminal. The web server keeps threads in memory while it runs.
 - Each informational question costs about four model calls, so replies are slow on a local model.
-- The routing quality of the real model has not been measured ([agent.md](agent.md)).
+- The routing quality was measured with one real model only, Claude Haiku 5.5, on a small set (20/20; see [agent.md](agent.md)). A local model was not measured.

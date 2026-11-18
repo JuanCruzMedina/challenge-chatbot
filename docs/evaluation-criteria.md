@@ -6,7 +6,7 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 |---|---|---|---|
 | 1 | Informational queries go through a centralized RAG + KG flow | Met | Tests + structure |
 | 2 | Action requests always run through an MCP Server | Met | Tests + structure |
-| 3 | The agent chooses autonomously between the two routes | Met | Loop tests (scripted) + 19/19 with Claude (small set) |
+| 3 | The agent chooses autonomously between the two routes | Met | Loop tests (scripted) + 20/20 with Claude (small set) |
 | 4 | No manual conditional logic (if/else, keywords) | Met for routing | Static tests |
 | 5 | Modular and extensible: tools added without touching routing | Met | Tests with throwaway tools + real tools added to the server |
 | 6 | The MCP Server handles all actions with correct MCP schemas | Met | Tests |
@@ -28,7 +28,7 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 
 - The agent is a two-node loop (`model`, `tools`). The model receives the conversation and the tool list with descriptions and answers either with text or with tool calls. The code runs what was asked. Nothing else decides.
 - Evidence: `test_the_route_does_not_depend_on_the_words_of_the_message` (the same code path for different wording), `test_a_turn_that_needs_no_tool_calls_no_tool`, `test_the_graph_has_only_a_model_step_and_a_tools_step`.
-- **Honest limit.** These tests use a *scripted* model, so they prove that the **code** does not choose. They do not prove that a *real* model chooses well. `evaluation/agent.yaml` (19 turns: questions, actions, mixed, chat, unsupported) and `scripts/eval_agent.py` measure that with no judge model: run with Claude Haiku 5.5 it passed 16/16 on the first 16 turns and 19/19 after three regression turns were added (details and limits in the status at the end).
+- **Honest limit.** These tests use a *scripted* model, so they prove that the **code** does not choose. They do not prove that a *real* model chooses well. `evaluation/agent.yaml` (20 turns: questions, actions, mixed, chat, unsupported) and `scripts/eval_agent.py` measure that with no judge model: run with Claude Haiku 5.5 it passed 16/16 on the first 16 turns, 19/19 after three regression turns were added and 20/20 on the current set (details and limits in the status at the end).
 
 ## 4. No manual conditional logic
 
@@ -42,13 +42,17 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 - At the start of every turn the agent lists the server's tools again and rebuilds its loop. A tool is a module in `actions/tools/` with a `register` function; the server registers every module it finds.
 - Evidence: `tests/actions/test_extensibility.py` (a new module appears and the defaults are unchanged), `tests/agent/test_mcp_toolbox.py::test_a_tool_added_to_the_servers_package_is_available_with_its_own_schema` and `tests/agent/test_agent.py::test_the_tools_are_listed_again_at_the_start_of_every_turn` (a tool added between two turns shows up in the second).
 - Evidence in the tests: a tool module added to a tools package appears in the listing with its own schema and the defaults behave as before (`test_extensibility.py`); a tool added between two agent turns is visible in the second without any change to the agent (the two tests above). The agent source names no tool, and the test that checks it was mutation-checked.
-- Real additions: `append_to_document` (commit `4dbd149`) was added as one function and its registration in the server's tools. A documentation-ticket tool was also added as a single new file with no change in `agent/`, `chat/`, `knowledge/` or `llm/` (commit `97cfacc`), and removed afterwards because it was not useful (`remove-ticket-tool`). The history keeps that demonstration; it is no longer part of the product.
+- Real additions: `append_to_document` (commit `4dbd149`) was added as one function and its registration in the server's tools. `link_document` (commit `03706dc`) was added as one new module, `actions/tools/links.py`, with no change to the agent's loop or routing. A documentation-ticket tool was also added as a single new file with no change in `agent/`, `chat/`, `knowledge/` or `llm/` (commit `97cfacc`), and removed afterwards because it was not useful (`remove-ticket-tool`). The history keeps that demonstration; it is no longer part of the product.
 
 ## 6. The MCP Server handles all actions with correct schemas
 
-- Four tools, each with a description that says when to use it and when **not** to, a closed JSON Schema (`additionalProperties: false`), `required` lists matching the mandatory arguments, and typed arguments (a service slug pattern, a minimum length on the path).
+- Five tools (`add_document`, `append_to_document`, `update_document`, `mark_document_obsolete`, `link_document`), each with a description that says when to use it and when **not** to, a closed JSON Schema (`additionalProperties: false`), `required` lists matching the mandatory arguments, and typed arguments (a service slug pattern, a minimum length on the path).
 - Evidence: `tests/actions/test_server_discovery.py` (descriptions, closed schemas, required lists, unknown arguments rejected, invalid input as an MCP error that names the argument, a conflict as a normal result, success is not an error).
 - The agent forwards the schemas exactly as the server declares them (`agent/mcp_tools.py`); it does not rewrite them.
+- **Safeguards that live in the server, not in the agent** (`tests/actions/test_confirmation_and_scope.py`, `tests/actions/test_document_links.py`):
+  - *Confirmation of edits.* `update_document` and `mark_document_obsolete` first return `needs_confirmation` with a diff and write nothing; the call is repeated with `confirmed: true` after the person agrees. On by default, off with `ACTIONS_CONFIRM_EDITS=off`. Creating and appending do not ask.
+  - *Scope per session.* With `ACTIONS_ALLOWED_SERVICES` the server rejects a write to any other service, whatever the model asks. The PR review starts the server limited to the service of the PR.
+  - *Links.* `add_document` and `link_document` write what a document is about (`about`: services, APIs, events) in its front matter. Names that do not exist in the workspace are reported as `unresolved`, not written as links. The graph reads `about` and answers which documents talk about an entity.
 
 ## What was verified by hand
 
@@ -57,4 +61,7 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 ## Status and what is still open
 
 - Real-model routing: `scripts/eval_agent.py` with `claude-haiku-5-5`, run on 2026-11-17: **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about $0.016 by the ledger's estimate. The mixed turns called `query_knowledge` first and then the write tool; chat and unsupported turns called no tool. The log is the output of `LLM_PROVIDER=anthropic uv run python scripts/eval_agent.py --min-rate 0.7`. It is a small set (16 turns, written by the project), one run and one model, so it supports "the model routes correctly on these cases", not a general rate. A second run on 2026-11-17 with 19 turns (three added after trying the chat: all teams with leads, two appends to a README) passed **19/19**, about $0.03.
-- Nothing else is open for the six criteria. Optional extension of the brief (expose the solution as an MCP server for editors): not done.
+- Third run on 2026-11-18, after the confirmation, scope and link changes, with 20 turns (one added for a document created with its links): **20/20**, about $0.04. The evaluation starts the server with `ACTIONS_CONFIRM_EDITS=off`, so it measures the routing of one turn, not the two-step confirmation; the confirmation was tried by hand in the chat.
+- PR review with the same model (`scripts/eval_pr_review.py`, six invented pull requests): **5/6 or 6/6** depending on the run. The unstable case (update an existing document) passed 4 of 5 times when run alone.
+- Nothing else is open for the six criteria. Optional extension of the brief (expose the solution as an MCP server for editors): the actions server starts from a standard stdio configuration and an MCP client lists its five tools (see the README); it was not tried inside an editor, and the informational flow is not exposed as an MCP server.
+- Not measured: a local model (Ollama). Every figure above is one model, small sets written by the project.
