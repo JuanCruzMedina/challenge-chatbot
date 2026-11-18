@@ -6,7 +6,7 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 |---|---|---|---|
 | 1 | Informational queries go through a centralized RAG + KG flow | Met | Tests + structure |
 | 2 | Action requests always run through an MCP Server | Met | Tests + structure |
-| 3 | The agent chooses autonomously between the two routes | Met | Loop tests (scripted) + 16/16 with Claude (small set) |
+| 3 | The agent chooses autonomously between the two routes | Met | Loop tests (scripted) + 19/19 with Claude (small set) |
 | 4 | No manual conditional logic (if/else, keywords) | Met for routing | Static tests |
 | 5 | Modular and extensible: tools added without touching routing | Met | Tests with throwaway tools + real tools added to the server |
 | 6 | The MCP Server handles all actions with correct MCP schemas | Met | Tests |
@@ -28,7 +28,7 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 
 - The agent is a two-node loop (`model`, `tools`). The model receives the conversation and the tool list with descriptions and answers either with text or with tool calls. The code runs what was asked. Nothing else decides.
 - Evidence: `test_the_route_does_not_depend_on_the_words_of_the_message` (the same code path for different wording), `test_a_turn_that_needs_no_tool_calls_no_tool`, `test_the_graph_has_only_a_model_step_and_a_tools_step`.
-- **Honest limit.** These tests use a *scripted* model, so they prove that the **code** does not choose. They do not prove that a *real* model chooses well. `evaluation/agent.yaml` (16 turns: questions, actions, mixed, chat, unsupported) and `scripts/eval_agent.py` measure that with no judge model: run with Claude Haiku 5.5 it passed 16/16 (details and limits in the status at the end).
+- **Honest limit.** These tests use a *scripted* model, so they prove that the **code** does not choose. They do not prove that a *real* model chooses well. `evaluation/agent.yaml` (19 turns: questions, actions, mixed, chat, unsupported) and `scripts/eval_agent.py` measure that with no judge model: run with Claude Haiku 5.5 it passed 16/16 on the first 16 turns and 19/19 after three regression turns were added (details and limits in the status at the end).
 
 ## 4. No manual conditional logic
 
@@ -56,5 +56,5 @@ The brief ("Multi-Source Chatbot with Intelligent Agent Orchestration") lists si
 
 ## Status and what is still open
 
-- Real-model routing: `scripts/eval_agent.py` with `claude-haiku-5-5`, run on 2026-11-17: **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about $0.016 by the ledger's estimate. The mixed turns called `query_knowledge` first and then the write tool; chat and unsupported turns called no tool. The log is the output of `LLM_PROVIDER=anthropic uv run python scripts/eval_agent.py --min-rate 0.7`. It is a small set (16 turns, written by the project), one run and one model, so it supports "the model routes correctly on these cases", not a general rate.
+- Real-model routing: `scripts/eval_agent.py` with `claude-haiku-5-5`, run on 2026-11-17: **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about $0.016 by the ledger's estimate. The mixed turns called `query_knowledge` first and then the write tool; chat and unsupported turns called no tool. The log is the output of `LLM_PROVIDER=anthropic uv run python scripts/eval_agent.py --min-rate 0.7`. It is a small set (16 turns, written by the project), one run and one model, so it supports "the model routes correctly on these cases", not a general rate. A second run on 2026-11-17 with 19 turns (three added after trying the chat: all teams with leads, two appends to a README) passed **19/19**, about $0.03.
 - Nothing else is open for the six criteria. Optional extension of the brief (expose the solution as an MCP server for editors): not done.

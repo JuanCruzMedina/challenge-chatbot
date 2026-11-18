@@ -35,6 +35,7 @@ The model returns one JSON object. Only methods of this fixed catalog are accept
 | `obsolete_documents` | none | documents marked obsolete |
 | `list_entities` | `type` | every entity of a type (team, person, service, ...) |
 | `team_overview` | `team` | the services a team owns and the person who leads each |
+| `teams_overview` | none | every team with its services and leads (all teams at once) |
 
 Unknown methods, missing or extra arguments, filters that name an unknown client, application or service, and queries beyond the fourth are **dropped and recorded** in the trace. Entity names go through the graph's tolerant matching ("payments api" finds `payments-api`). Invalid JSON is retried once; if it fails again the flow continues with a document search alone.
 
@@ -50,7 +51,7 @@ Answer(question, text, status, grounded, citations, trace, llm, passages)   # .t
 | `insufficient_evidence` | nothing relevant was found; a fixed message says so |
 | `degraded` | the plan failed twice, or the answer failed twice and the flow answered from the evidence itself |
 
-`passages` lists the document passages the flow retrieved (`id`, `path`, `heading_path`, `text`, `truncated`, `exact`). `text` is the section body as it is in the file; `exact` is true only when the flow was given the data root, the text appears in the file exactly as written and it was not cut (a passage over 1,500 characters is cut and marked `truncated`). The agent uses them to quote the text to replace when it edits a document.
+`passages` lists the document passages the flow retrieved (`id`, `path`, `heading_path`, `text`, `truncated`, `exact`, `service`, `doc_path`). `text` is the section body as it is in the file; `exact` is true only when the flow was given the data root, the text appears in the file exactly as written and it was not cut (a passage over 1,500 characters is cut and marked `truncated`). `service` and `doc_path` are the service and the path inside it (empty for documents that belong to no service), which is the form the write tools take; `path` is the workspace path and is not accepted by them. The agent uses them to quote the text to replace when it edits a document.
 
 `grounded` is true when at least one valid citation remains after the check. **It means "cites evidence that exists", not "is true"** (see Limits). Each citation says whether it comes from the graph or from a document and lists its source files. The trace records every stage, the plan items that were dropped and the citations that were removed.
 

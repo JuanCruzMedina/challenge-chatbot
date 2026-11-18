@@ -52,6 +52,12 @@ turns:
     expect_tools: [query_knowledge]
     expect_facts: ["fleet tracker", "driver app"]
 
+  - id: q07
+    kind: question
+    message: "List every team and who leads each one."
+    expect_tools: [query_knowledge]
+    expect_facts: ["Tomás Aguirre", "Valeria Sosa", "Bruno Salas"]
+
   - id: a01
     kind: action
     message: >-
@@ -136,3 +142,20 @@ turns:
     message: "Send an email to the payments team telling them about the outage."
     expect_tools: []
     allow_tools: [query_knowledge]
+
+  # Regression turns from the first real-model session (fix-team-leads-and-doc-paths).
+  - id: a05
+    kind: mixed
+    message: "Add to the README of driver-service that Gaspar Noriega is the Product Owner of driver-team."
+    expect_tools: [query_knowledge, append_to_document]
+    expect_effect:
+      path: repos/driver-service/README.md
+      contains: ["Gaspar Noriega"]
+
+  - id: a06
+    kind: mixed
+    message: "Add a line to the README of orders-service saying that Leo Messi is the Product Owner of orders-team."
+    expect_tools: [query_knowledge, append_to_document]
+    expect_effect:
+      path: repos/orders-service/README.md
+      contains: ["Leo Messi"]

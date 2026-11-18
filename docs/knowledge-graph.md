@@ -33,6 +33,7 @@ Every entity and relation lists the files it came from (`sources`), and every an
 | `obsolete_documents()` | documents marked obsolete, with service and path |
 | `list_entities(type)` | every entity of a type, sorted by name; an unknown type lists the valid ones |
 | `team_overview(team)` | the services a team owns, each with its lead |
+| `teams_overview()` | every team with its services and leads, as plain names, in one answer (so "all teams and their leads" fits one query) |
 
 Names can be loose: any letter case, spaces, hyphens or underscores. When a name matches several entities, `find_entities` shows them all; the other methods take the best match of the type they need.
 

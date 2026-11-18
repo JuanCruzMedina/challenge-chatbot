@@ -234,6 +234,20 @@ class TeamOverview(_Plain):
     found: bool = True
 
 
+@dataclass
+class TeamRow(_Plain):
+    """A team with its services and leads as plain names: compact enough for all teams to fit in one fact."""
+    team: str
+    services: list[dict[str, str | None]]
+
+
+@dataclass
+class TeamsOverview(_Plain):
+    teams: list[TeamRow]
+    sources: list[str]
+    found: bool = True
+
+
 # --- the graph ----------------------------------------------------------------------------
 
 class KnowledgeGraph:
@@ -443,6 +457,14 @@ class KnowledgeGraph:
                 edges.add((service, lead, m.LED_BY))
             services.append(TeamService(self._ref(service), self._opt_ref(lead)))
         return TeamOverview(self._ref(key), services, self._sources(nodes, edges))
+
+    def teams_overview(self) -> TeamsOverview:
+        """Every team with the services it owns and the person who leads each, in one answer."""
+        teams = [self.team_overview(self._ref(k).id) for k, d in self._g.nodes(data=True) if d["type"] == m.TEAM]
+        found = sorted((t for t in teams if not isinstance(t, NotFound)), key=lambda t: (_fold(t.team.name), t.team.id))
+        rows = [TeamRow(t.team.name, [{"service": s.service.name, "lead": s.lead.name if s.lead else None}
+                                      for s in t.services]) for t in found]
+        return TeamsOverview(rows, sorted({s for t in found for s in t.sources}))
 
     def api_consumers(self, api: str) -> ApiConsumers | NotFound:
         key = self._resolve(api, m.API)

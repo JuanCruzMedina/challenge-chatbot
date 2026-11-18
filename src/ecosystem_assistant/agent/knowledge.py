@@ -23,7 +23,8 @@ TOOL_DESCRIPTION = (
     "leads, applications and clients, features, product vision, runbooks and how things relate to each other. "
     "Use it for ANY question about facts or documentation. It only reads: it never changes anything. "
     "Its result has the answer (with [K1] / [D1] citations), a status, whether it is grounded, the sources "
-    "of every citation, and the passages of documents it found (path, section and text). Pass the answer on to the "
+    "of every citation, and the passages of documents it found (path, section, text and, for a service document, its "
+    "service and doc_path, which is the path the write tools take). Pass the answer on to the "
     "person as it is, keep its citations and name its sources; do not add facts that are not in it. When you must "
     "change an existing document, quote the text to replace from a passage marked exact (not truncated)."
 )

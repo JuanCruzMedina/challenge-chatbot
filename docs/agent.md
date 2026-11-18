@@ -46,6 +46,8 @@ The prompt names no tool, but it gives these rules (checked by `tests/agent/test
 - **A confirmation is the order to act.** After a "yes" the agent writes in that turn; it asks again only for a value a tool needs and it does not know.
 - **Conflicts are checked, then asked.** Before writing a fact about owners, leads or other documented data, the agent checks it with the knowledge tool. If it contradicts the documentation it says what the documentation says and asks which is right; if not, it writes without asking.
 - **Edits quote the text, taken from the passages.** `query_knowledge` returns, besides the answer, the document passages it found (path, section, text, and whether the text is `exact` and not cut). To change an existing document the agent quotes the text to replace from an exact passage, asks again for the section when it is not there, and never invents the text. A wrong quote ends in the update tool's `conflict` result, which tells the model to retry.
+- **A gap is not a conflict.** A fact the documentation does not mention is new and is written without asking; only a contradiction is asked about.
+- **Paths are inside the service.** The write tools take `doc_path` as the passages give it (`docs/api.md`), never the workspace path `repos/<service>/…`, which the server rejects.
 - **Write tools handle markdown documents only.** A new fact goes into a markdown document (for example `docs/product-owner.md`), not into `service.yaml`.
 
 These rules are guidance for the model. The tests with a scripted model prove that the prompt has them and that the loop runs the tools in order; how well a real model follows them has not been measured.
@@ -184,7 +186,7 @@ The full `live_check` has not been run. The routing evaluation was run with Clau
 
 ## The routing evaluation
 
-`evaluation/agent.yaml` has 16 turns of five kinds: questions, actions, mixed (look up, then write), chat and
+`evaluation/agent.yaml` has 19 turns of five kinds: questions, actions, mixed (look up, then write), chat and
 unsupported requests. `scripts/eval_agent.py` runs each in its own fresh copy of the sample data and grades with no
 judge model:
 
@@ -201,7 +203,9 @@ uv run python scripts/eval_agent.py --min-rate 0.7
 **Measured with:** `claude-haiku-5-5` (provider `anthropic`, hashing embedder), one run on 2026-11-17 with the tools
 of that day (four MCP tools): **16/16** (questions 6/6, actions 4/4, mixed 2/2, chat 2/2, unsupported 2/2), about
 $0.016 by the ledger's estimate. Every mixed turn called `query_knowledge` before the write tool, and the chat and
-unsupported turns called no tool. Read it with care: 16 turns written by the project, one run (the model is not
+unsupported turns called no tool.
+
+**Second run, after `fix-team-leads-and-doc-paths`** (same model, 19 turns, three of them added from the first real session: all teams with their leads, and two appends to a README): **19/19** (questions 7/7, actions 4/4, mixed 4/4, chat 2/2, unsupported 2/2), about $0.03. Before the fix, the same session had shown a wrong-path write and an incomplete list of leads. Read it with care: 19 turns written by the project, one run (the model is not
 deterministic), one model. The grading rules, the report and the isolation between turns are also tested with
 scripted models. Nothing is claimed about `qwen2.5:7b-instruct`: the run with Ollama has not been made.
 

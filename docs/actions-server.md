@@ -14,7 +14,7 @@ Specification: `openspec/specs/mcp-actions-tools/spec.md` once the change is arc
 | `mark_document_obsolete` | flag a document as outdated | **`service`**, **`doc_path`**, **`reason`**, `replaced_by` | `outcome: marked_obsolete` or `already_obsolete` |
 
 - `service` is a lowercase slug of an existing service folder, for example `payments-service`.
-- `doc_path` is relative to the service, ends in `.md`, and has no `..`, for example `docs/api-v2.md`.
+- `doc_path` is relative to the service, ends in `.md`, and has no `..`, for example `docs/api-v2.md`. A path that starts with `repos/<service>/` (the workspace path shown in citations) is rejected with the path inside the service to use; nothing is written.
 - Every schema is closed: an unknown argument is rejected.
 - Invalid input is an **error result** (`is_error`) whose message names the argument. A **conflict** is a normal result: nothing is written and the caller decides what to do.
 

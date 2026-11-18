@@ -87,3 +87,10 @@ def test_a_scripted_turn_edits_a_document_with_text_quoted_from_a_returned_passa
     assert not reply.tool_calls[1].error
     text = (workspace_dir / "repos/payments-service/docs/api-v1.md").read_text(encoding="utf-8")
     assert replacement in text and quoted not in text
+
+
+def test_the_prompt_says_missing_data_is_not_a_conflict() -> None:
+    text = " ".join(SYSTEM_PROMPT.lower().split())
+    assert "does not mention" in text and "not a conflict" in text
+    assert "inside the service" in text and "doc_path" in text
+    assert len(SYSTEM_PROMPT.splitlines()) < 40

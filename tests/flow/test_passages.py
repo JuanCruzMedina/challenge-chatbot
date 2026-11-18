@@ -52,3 +52,22 @@ def test_a_long_passage_is_cut_and_marked_truncated() -> None:
 
     assert info.truncated is True and len(info.text) == MAX_PASSAGE_CHARS
     assert info.exact is False  # a cut text must never be presented as a safe quote
+
+
+def _info(path: str):
+    passage = Passage("D1", "Heading\n\nbody", 1.0, path, "Heading", "T", "", "", "current")
+    return passage_info(passage, "Heading\n\nbody")
+
+
+def test_a_service_passage_names_its_service_and_the_path_inside_it() -> None:
+    info = _info("repos/driver-service/README.md")
+    assert (info.service, info.doc_path) == ("driver-service", "README.md")
+    assert info.to_dict()["service"] == "driver-service"
+
+    nested = _info("repos/payments-service/docs/api-v1.md")
+    assert (nested.service, nested.doc_path) == ("payments-service", "docs/api-v1.md")
+
+
+def test_a_passage_outside_a_service_has_no_service() -> None:
+    info = _info("clients/demo-grocery/product/vision.md")
+    assert (info.service, info.doc_path) == ("", "")

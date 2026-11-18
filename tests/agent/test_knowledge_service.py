@@ -147,7 +147,7 @@ def test_the_tool_result_has_the_exact_passages_that_can_be_quoted(workspace_dir
 
     assert result["passages"]
     for passage in result["passages"]:
-        assert set(passage) == {"id", "path", "heading_path", "text", "truncated", "exact"}
+        assert set(passage) == {"id", "path", "heading_path", "text", "truncated", "exact", "service", "doc_path"}
         if passage["exact"]:
             assert passage["text"] in (workspace_dir / passage["path"]).read_text(encoding="utf-8")
     rules = [p for p in result["passages"] if "v1 does **not** support automatic retries" in p["text"]]

@@ -1,6 +1,9 @@
 """Spec: structural questions - client overview, application services, owner, describe."""
 from __future__ import annotations
 
+import json
+
+from ecosystem_assistant.knowledge.flow.evidence import FACT_MAX_CHARS
 from ecosystem_assistant.knowledge.graph.queries import KnowledgeGraph
 
 
@@ -85,3 +88,16 @@ def test_a_team_with_its_services_and_leads(sample_graph: KnowledgeGraph) -> Non
 
 def test_an_unknown_team_is_not_found(sample_graph: KnowledgeGraph) -> None:
     assert sample_graph.team_overview("ghost-team").found is False
+
+
+def test_teams_overview_gives_every_team_with_its_services_and_leads(sample_graph: KnowledgeGraph) -> None:
+    result = sample_graph.teams_overview()
+
+    assert result.found is True
+    assert len(result.teams) == 7
+    leads = {s["service"]: s["lead"] for team in result.teams for s in team.services}
+    assert leads["orders-service"] == "Tomás Aguirre"
+    assert leads["payments-service"] == "Valeria Sosa"
+    assert len(json.dumps(result.to_dict(), ensure_ascii=False)) < FACT_MAX_CHARS, "all teams must fit in one fact"
+    assert all(lead for lead in leads.values())
+    assert "repos/orders-service/service.yaml" in result.sources

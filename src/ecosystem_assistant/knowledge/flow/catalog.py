@@ -30,6 +30,7 @@ CATALOG: dict[str, QuerySpec] = {
         QuerySpec("list_entities", ("type",),
                   "every entity of one type (team, person, service, client, application, api, event, feature)"),
         QuerySpec("team_overview", ("team",), "services a team owns and the person who leads each"),
+        QuerySpec("teams_overview", (), "every team with its services and the person who leads each (all teams at once)"),
     )
 }
 

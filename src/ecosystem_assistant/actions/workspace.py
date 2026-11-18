@@ -70,6 +70,13 @@ class Workspace:
     def resolve_doc(self, service: str, doc_path: str) -> Path:
         base = self.service_dir(service)
         validate_relative_md(doc_path)
+        parts = PurePosixPath(doc_path).parts
+        if parts[:2] == ("repos", service):
+            inner = PurePosixPath(*parts[2:]).as_posix() if len(parts) > 2 else ""
+            raise WorkspaceError(
+                f"doc_path {doc_path!r} starts with the workspace folder of the service. Use the path inside the "
+                f"service instead: {inner!r}"
+            )
         resolved = (base / doc_path).resolve()
         if not resolved.is_relative_to(base):
             raise WorkspaceError(f"doc_path {doc_path!r} resolves outside the service folder")

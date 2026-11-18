@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
+from pathlib import PurePosixPath
 from typing import Any
 
 from ecosystem_assistant.knowledge.flow import prompts
@@ -44,6 +45,8 @@ class PassageInfo:
     text: str
     truncated: bool = False
     exact: bool = False
+    service: str = ""
+    doc_path: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -55,7 +58,15 @@ def passage_info(passage: Any, file_text: str | None = None) -> PassageInfo:
     body = passage.text[len(prefix):] if passage.text.startswith(prefix) else passage.text
     truncated = len(body) > MAX_PASSAGE_CHARS
     exact = not truncated and file_text is not None and body in file_text
-    return PassageInfo(passage.id, passage.path, passage.heading_path, body[:MAX_PASSAGE_CHARS], truncated, exact)
+    service, doc_path = _service_and_path(passage.path)
+    return PassageInfo(passage.id, passage.path, passage.heading_path, body[:MAX_PASSAGE_CHARS], truncated, exact,
+                       service, doc_path)
+
+
+def _service_and_path(path: str) -> tuple[str, str]:
+    """``repos/<service>/<inner path>`` -> (service, inner path): the form the write tools take; else empty."""
+    parts = PurePosixPath(path).parts
+    return (parts[1], PurePosixPath(*parts[2:]).as_posix()) if len(parts) > 2 and parts[0] == "repos" else ("", "")
 
 
 @dataclass
